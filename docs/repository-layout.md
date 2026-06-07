@@ -1,8 +1,8 @@
 # Repository layout
 
-This document describes the generated rstest-xfail repository layout. It
-is the canonical reference for where source code, tests, configuration,
-automation, and long-lived documentation belong.
+This document describes the generated rstest-xfail repository layout. It is the
+canonical reference for where source code, tests, configuration, automation,
+and long-lived documentation belong.
 
 ## Top-level tree
 
@@ -22,8 +22,11 @@ compact and omits build output such as `target/`.
 ├── docs/
 │   ├── contents.md
 │   ├── developers-guide.md
+│   ├── roadmap.md
 │   ├── repository-layout.md
+│   ├── terms-of-reference.md
 │   ├── users-guide.md
+│   ├── xfail-design.md
 │   └── ...
 ├── src/
 
@@ -55,6 +58,12 @@ compact and omits build output such as `target/`.
   design material.
 - `docs/contents.md`: Indexes the documentation set and should be updated when
   documentation files are added, renamed, or removed.
+- `docs/terms-of-reference.md`: Defines the problem space, scope boundaries,
+  users, constraints, and open questions for rstest-xfail.
+- `docs/xfail-design.md`: Specifies the expected-failure macro architecture,
+  core classifier contract, async boundary, and rstest-bdd integration model.
+- `docs/roadmap.md`: Breaks the design into sequenced, review-sized delivery
+  work.
 - `docs/users-guide.md`: Explains how to use the generated project and its
   public build and test commands.
 - `docs/developers-guide.md`: Explains the contributor workflow and local
