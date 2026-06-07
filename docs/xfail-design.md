@@ -84,6 +84,11 @@ The split keeps the proc macro out of downstream runtime integrations.
 `rstest-bdd` should depend on `rstest-xfail-core` when it wants classification
 semantics, not on `rstest-xfail-macros`.
 
+`rstest-xfail` must not implement BDD-specific attributes. `rstest-bdd` owns the
+`#[given]`, `#[when]`, `#[then]`, and any xfail-aware BDD macro surface; this
+workspace supplies only the reusable classification logic that those macros
+consume.
+
 ### 5.1. Data flow
 
 1. A user writes `#[xfail(reason = "...")]` on a test function.
@@ -308,11 +313,13 @@ is proven.
 
 ## 10. `rstest-bdd` integration
 
-`rstest-bdd` should not rely on stacking `#[xfail]` with `#[then]` as the
-primary integration. A `Then` function is registered into a scenario runtime;
-expected failure is scenario execution policy.
+`rstest-bdd` owns the BDD attribute implementation. It should not rely on
+stacking `#[xfail]` from this crate with `#[then]` as the primary integration. A
+`Then` function is registered into a scenario runtime; expected failure is
+scenario execution policy.
 
-The preferred BDD surface is native metadata on the BDD macro:
+The preferred BDD surface is native metadata on the BDD macro implemented in
+`rstest-bdd`:
 
 ```rust
 #[then(
@@ -325,7 +332,7 @@ fn report_includes_harness_stderr(state: &ScenarioState) -> anyhow::Result<()> {
 }
 ```
 
-An alternate compatibility surface may be:
+An alternate `rstest-bdd` compatibility surface may be:
 
 ```rust
 #[then_xfail(
@@ -338,7 +345,7 @@ fn report_includes_harness_stderr(state: &ScenarioState) -> anyhow::Result<()> {
 }
 ```
 
-The BDD adapter should:
+The `rstest-bdd` adapter should:
 
 - execute the step body,
 - classify panic or `Err` through `rstest-xfail-core`,
@@ -385,13 +392,13 @@ than only one example per feature.
 
 ## 13. Risks and trade-offs
 
-| Risk                                                                      | Consequence                                                            | Mitigation                                                                                      |
-| ------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Proc-macro stacking differs across `rstest`, runtime macros, and `xfail`. | Valid-looking examples fail to compile or classify at the wrong layer. | Treat supported attribute order as a tested contract and reject or document unsupported orders. |
-| Panic hooks print noise before caught panics.                             | XFAIL output may contain panic-hook text.                              | Do not mutate global hooks by default; document the behaviour.                                  |
-| Non-strict XPASS hides fixed bugs.                                        | Stale xfails accumulate.                                               | Default to strict and require explicit opt-out if non-strict ships.                             |
-| Message matching on `Debug` output is brittle.                            | Error formatting changes can flip classification.                      | Document `contains` as a convenience, not a semantic error contract.                            |
-| BDD integration duplicates macro syntax decisions.                        | `rstest-xfail` and `rstest-bdd` diverge.                               | Keep classification in core and make BDD syntax an adapter decision.                            |
+| Risk                                                                      | Consequence                                                                 | Mitigation                                                                                      |
+| ------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Proc-macro stacking differs across `rstest`, runtime macros, and `xfail`. | Valid-looking examples fail to compile or classify at the wrong layer.      | Treat supported attribute order as a tested contract and reject or document unsupported orders. |
+| Panic hooks print noise before caught panics.                             | XFAIL output may contain panic-hook text.                                   | Do not mutate global hooks by default; document the behaviour.                                  |
+| Non-strict XPASS hides fixed bugs.                                        | Stale xfails accumulate.                                                    | Default to strict and require explicit opt-out if non-strict ships.                             |
+| Message matching on `Debug` output is brittle.                            | Error formatting changes can flip classification.                           | Document `contains` as a convenience, not a semantic error contract.                            |
+| `rstest-xfail` implements BDD macro syntax directly.                      | `rstest-xfail` and `rstest-bdd` diverge, and BDD ownership becomes unclear. | Keep classification in core and implement BDD attributes in `rstest-bdd`.                       |
 
 ## 14. Deferred decisions
 

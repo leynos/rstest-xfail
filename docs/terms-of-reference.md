@@ -124,6 +124,9 @@ reporting and macro-level test behaviour do not diverge.
 - Support async tests without choosing a runtime for users.
 - Export `rstest-xfail-core` as a runtime-only crate that owns outcome
   classification and can be consumed by `rstest-bdd`.
+- Keep BDD attribute implementation out of `rstest-xfail`; `rstest-bdd` owns
+  its `#[then(...)]` and related macro surfaces while consuming the shared core
+  classification logic.
 - Make strict XPASS the default so a fixed bug fails the suite and prompts
   removal of the expected-failure marker.
 - Preserve compatibility with Rust's default harness instead of requiring a
@@ -192,8 +195,9 @@ Strategic success:
   If they cannot, `rstest-xfail` cannot make an async function executable on
   its own.
 - `rstest-bdd` maintainers can add native xfail metadata to their macro and
-  runtime surface. If not, the standalone attribute macro remains possible but
-  more fragile because it depends on proc-macro stacking.
+  runtime surface. If not, BDD expected-failure support remains out of scope for
+  `rstest-xfail` rather than being implemented through proc-macro stacking in
+  this repository.
 
 ### 8.3. Dependencies
 
@@ -212,7 +216,7 @@ Strategic success:
 | Should v1 expose `strict = false`, or reserve non-strict XPASS for a later release?        | Non-strict XPASS mirrors pytest but weakens CI feedback.                                           | Decide in an Architecture Decision Record (ADR) before stabilizing the macro arguments. |
 | Should message matching be called `contains`, `expected`, or `matches`?                    | The name affects user intuition and compatibility with Rust's `#[should_panic(expected = "...")]`. | Prototype macro syntax and review examples in the user's guide.                         |
 | Should async xfail require an `async` feature using `FutureExt::catch_unwind`?             | The dependency changes the core surface and feature matrix.                                        | Spike sync wrapper and future-level catching with `trybuild` cases.                     |
-| Should `rstest-bdd` expose `#[then(..., xfail = "...")]`, `#[then_xfail(...)]`, or both?   | Macro syntax becomes part of the BDD user-facing API.                                              | Decide in the `rstest-bdd` integration design before implementation.                    |
+| Should `rstest-bdd` expose `#[then(..., xfail = "...")]`, `#[then_xfail(...)]`, or both?   | Macro syntax belongs to `rstest-bdd`, not `rstest-xfail`.                                          | Decide in the `rstest-bdd` integration design before implementation.                    |
 | Should xfail messages use `eprintln!`, `tracing`, or return structured records to callers? | Output policy affects libtest noise and downstream reporting.                                      | Let `rstest-xfail-core` return records and keep printing in adapters.                   |
 
 ## Appendix A. References

@@ -7,7 +7,7 @@ workstreams that validate each idea, and tasks are review-sized execution units.
 
 The roadmap does not promise dates. It records build order, dependencies, and
 acceptance criteria for the `rstest-xfail` workspace and the downstream
-`rstest-bdd` core-classification integration.
+`rstest-bdd` work that consumes `rstest-xfail-core` classification logic.
 
 ## 1. Foundational phase: settle contracts before macro expansion
 
@@ -161,6 +161,9 @@ Idea: if `rstest-bdd` can classify expected failures through
 forcing BDD users through a standalone attribute macro.
 
 This phase designs and implements the downstream integration boundary.
+`rstest-bdd`, not `rstest-xfail`, owns the BDD attribute implementation.
+`rstest-xfail` work in this phase is limited to core APIs that make that
+integration possible.
 
 ### 4.1. Add BDD-facing core adapters
 
@@ -179,27 +182,28 @@ test classification.
   - Success: downstream adapters can report XFAIL and XPASS without parsing
     display strings.
 
-### 4.2. Integrate with `rstest-bdd`
+### 4.2. Specify the `rstest-bdd` integration handoff
 
-This step answers whether expected failure is scenario execution policy and
-which macro syntax expresses it.
+This step answers what `rstest-bdd` must implement to treat expected failure as
+scenario execution policy while consuming `rstest-xfail-core` classification.
 
-- [ ] 4.2.1. Decide and document the `rstest-bdd` macro syntax.
+- [ ] 4.2.1. Document the `rstest-bdd` macro-syntax handoff.
   - Requires 4.1.2.
   - See terms-of-reference.md §9 and xfail-design.md §10.
-  - Success: the decision names whether `#[then(..., xfail = "...")]`,
-    `#[then_xfail(...)]`, or both ship.
-- [ ] 4.2.2. Implement BDD expected-failure execution through
+  - Success: `rstest-xfail` states that `rstest-bdd` decides and implements
+    whether `#[then(..., xfail = "...")]`, `#[then_xfail(...)]`, or both ship.
+- [ ] 4.2.2. Provide the `rstest-bdd` integration contract for
   `rstest-xfail-core`.
   - Requires 4.2.1.
   - See xfail-design.md §10.
-  - Success: `Then` steps record XFAIL, strict XPASS fails the scenario, and
-    explicit BDD skips remain skips.
-- [ ] 4.2.3. Add BDD reporting examples and compatibility notes.
+  - Success: the contract states how `rstest-bdd` should pass step `Err`,
+    panic, and success outcomes into the classifier, and how strict XPASS maps
+    to scenario failure.
+- [ ] 4.2.3. Add BDD handoff notes for reporting and skips.
   - Requires 4.2.2.
   - See xfail-design.md §§10-11.
   - Success: documentation explains why `StepExecution::Skipped` is not an
-    xfail substitute.
+    xfail substitute and why BDD reporting remains owned by `rstest-bdd`.
 
 ## 5. Hardening phase: make the compatibility matrix boring
 
