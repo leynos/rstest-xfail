@@ -59,7 +59,8 @@ This step answers whether the shared runtime contract can classify panic and
   - Requires 1.2.1 and 1.2.2.
   - See xfail-design.md §§6.2, 11-12.
   - Success: tests cover pass, panic, `Err`, strict XPASS, mode filtering, and
-    message matching.
+    message matching, including unexpected failures for mode and message
+    mismatches.
 
 ## 2. Vertical slice: synchronous `rstest` users can mark expected failures
 
@@ -86,7 +87,8 @@ shape that `rstest` and libtest expect.
   - Requires 2.1.1 and 1.2.3.
   - See xfail-design.md §§5.1, 7.
   - Success: generated code preserves attributes, generics, visibility, where
-    clauses, arguments, and doc comments.
+    clauses, arguments, and doc comments, and panics when the core returns
+    `UnexpectedFailure`.
 - [ ] 2.1.3. Re-export the macro and stable core types from the facade crate.
   - Requires 2.1.2.
   - See xfail-design.md §5.
@@ -223,7 +225,7 @@ not only the happy-path examples.
   - Requires phase 3.
   - See xfail-design.md §12.
   - Success: each matrix row asserts the exact `XfailOutcome` and adapter
-    behaviour.
+    behaviour, including harness failure for unexpected xfail outcomes.
 - [ ] 5.1.2. Add compile-fail tests for unsupported macro placements and
   unsupported signatures.
   - Requires 2.2.1 and 3.1.2.
