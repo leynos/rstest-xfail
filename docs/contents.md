@@ -5,6 +5,13 @@ documentation set.
 
 ## Project guides
 
+- [Terms of reference](terms-of-reference.md) defines the problem space,
+  users, scope boundaries, constraints, and open questions for rstest-xfail.
+- [Technical design](xfail-design.md) specifies the xfail attribute macro,
+  shared core classifier, async support boundary, and rstest-bdd integration
+  architecture.
+- [Roadmap](roadmap.md) sequences the design into review-sized delivery
+  phases and tasks.
 - [User guide](users-guide.md) explains how to use the generated project and
   its public build and test commands.
 - [Developer guide](developers-guide.md) explains the local workflow and
