@@ -38,7 +38,7 @@ jobs:
             !**/target/**
             !**/dist/**
       - name: Setup uv
-        uses: astral-sh/setup-uv@12d13f90bc3a5a1971bebad4beb09a4dfa962e91
+        uses: astral-sh/setup-uv@a9b33f02405f50e505f17ab8530e42a23200a5d1
       - name: Install test runner
         env:
           RUSTFLAGS: ""
