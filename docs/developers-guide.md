@@ -36,6 +36,19 @@ LLVM-compatible linker behaviour.
 Install `clang`, `lld`, `mold`, `python3`, and `cargo-audit` before running the
 full generated workflow locally on Linux.
 
+Whitaker is the df12 Productions opinionated lint suite used by `make lint`.
+See the [Whitaker user's guide](whitaker-users-guide.md) for installation,
+configuration, and local invocation details.
+
+Lading is the df12 Productions release helper for Cargo workspaces. See the
+[Lading user guide](lading-users-guide.md) for version bumping, publication
+planning, and workspace publishing workflows.
+
+`rstest-bdd` is a behaviour-driven development extension to `rstest` that runs
+Gherkin-backed tests through Rust's standard test infrastructure. See the
+[`rstest-bdd` user's guide](rstest-bdd-users-guide.md) for fixture integration,
+scenario bindings, and supported testing patterns.
+
 ### Security audit ignores
 
 Security audit jobs may set `CARGO_AUDIT_IGNORES` for narrowly scoped RustSec

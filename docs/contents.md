@@ -31,12 +31,19 @@ documentation set.
   explains how to write maintainable, executable Rust documentation examples.
 - [Rust testing with `rstest` fixtures](rust-testing-with-rstest-fixtures.md)
   explains fixture-based, parameterized, and asynchronous testing with `rstest`.
+- [`rstest-bdd` user's guide](rstest-bdd-users-guide.md) explains the
+  behaviour-driven development extension to `rstest`, including Gherkin-backed
+  tests that run through Rust's standard test infrastructure.
 
 ## Engineering practice
 
 - [Complexity antipatterns and refactoring strategies](complexity-antipatterns-and-refactoring-strategies.md)
   explains cognitive complexity, the bumpy-road antipattern, and refactoring
   approaches for maintainable code.
+- [Lading user guide](lading-users-guide.md) explains the df12 Productions
+  release workflow tool for versioning and publishing Cargo workspaces.
 - [Scripting standards](scripting-standards.md) explains the preferred Python
   scripting stack, command execution patterns, and test expectations for helper
   scripts.
+- [Whitaker user's guide](whitaker-users-guide.md) explains the df12
+  Productions opinionated Rust lint suite and its project integration workflow.
