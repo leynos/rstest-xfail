@@ -7,8 +7,8 @@ rendering it from the template.
 
 Generated projects use Rust 2024, a pinned nightly toolchain, strict lint
 settings, and documented starter code. Library projects render `src/lib.rs`.
-Application projects render `src/main.rs`, `src/lib.rs`, release automation,
-and `[package.metadata.binstall]` metadata for binary installation.
+Application projects render `src/main.rs`, `src/lib.rs`, release automation, and
+`[package.metadata.binstall]` metadata for binary installation.
 
 Development builds use Cranelift for debug code generation. On Linux targets,
 `.cargo/config.toml` configures clang to link with `mold` so local debug builds
