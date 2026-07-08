@@ -1,4 +1,4 @@
-.PHONY: help all clean test build release coverage lint fmt check-fmt markdownlint nixie audit rust-audit
+.PHONY: help all clean test build release coverage lint fmt check-fmt markdownlint nixie audit rust-audit test-workflow-contracts
 
 SHELL := bash
 
@@ -61,6 +61,9 @@ fmt: ## Format Rust and Markdown sources
 
 check-fmt: ## Verify formatting
 	$(CARGO) fmt --all -- --check
+
+test-workflow-contracts: ## Validate the mutation-testing caller contract
+	uv run --with 'pytest>=8' --with 'pyyaml>=6' pytest tests/workflow_contracts -q
 
 markdownlint: ## Lint Markdown files
 	$(MDLINT) '**/*.md'
