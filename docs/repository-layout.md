@@ -29,9 +29,11 @@ compact and omits build output such as `target/`.
 │   ├── xfail-design.md
 │   └── ...
 ├── src/
-
 │   └── lib.rs
-
+├── scripts/
+│   ├── tests/
+│   │   └── test_typos_rollout_check.py
+│   └── typos_rollout_check.py
 ├── tests/
 │   └── stub.rs
 ├── AGENTS.md
@@ -41,7 +43,9 @@ compact and omits build output such as `target/`.
 ├── README.md
 ├── clippy.toml
 ├── codecov.yml
-└── rust-toolchain.toml
+├── rust-toolchain.toml
+├── typos.local.toml
+└── typos.toml
 ```
 
 ## Path responsibilities
@@ -74,6 +78,11 @@ compact and omits build output such as `target/`.
 - `src/lib.rs`: Contains the library crate root and exported public API
   surface.
 
+- `scripts/typos_rollout_check.py`: Enforces exact phrase corrections that the
+  token-based Typos scanner cannot represent.
+- `scripts/tests/test_typos_rollout_check.py`: Holds the focused phrase-scanner
+  tests.
+
 - `tests/`: Holds integration and behavioural tests that exercise public
   behaviour.
 - `tests/stub.rs`: Keeps the generated test directory valid until real tests
@@ -92,6 +101,9 @@ compact and omits build output such as `target/`.
 - `codecov.yml`: Configures coverage reporting behaviour.
 - `rust-toolchain.toml`: Pins the Rust toolchain channel and required
   components.
+- `typos.local.toml`: Holds narrow repository-specific spelling policy.
+- `typos.toml`: Provides the generated en-GB-oxendict configuration consumed by
+  the pinned spelling gate.
 
 ## Ownership boundaries
 

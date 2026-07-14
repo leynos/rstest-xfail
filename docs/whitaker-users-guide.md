@@ -476,7 +476,7 @@ ancestry chain.
 
 #[my_framework::test]
 async fn my_test() {
-    helper(); // allowed — ancestor is a recognised test function
+    helper(); // allowed — ancestor is a recognized test function
 }
 
 fn helper() {

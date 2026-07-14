@@ -13,8 +13,8 @@ Last substantive revision: 2026-06-07.
 
 ## 1. Background and motivation
 
-Rust's stock test harness recognises passing tests, failing tests, and ignored
-tests. It also recognises `#[should_panic]`, but that marker means "panic is
+Rust's stock test harness recognizes passing tests, failing tests, and ignored
+tests. It also recognizes `#[should_panic]`, but that marker means "panic is
 success" and requires the test function to return `()`. That does not model the
 pytest-style expected-failure workflow where the test still runs, expected
 failure keeps the suite green, and an unexpected pass draws attention to a bug
