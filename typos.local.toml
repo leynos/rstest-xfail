@@ -1,0 +1,21 @@
+# Repository-specific identifiers and formal names.
+
+schema = 1
+
+[oxford]
+stems = []
+
+[words]
+accepted = []
+
+[words.corrections]
+
+[patterns]
+ignore = [
+  # Preserve exact formal product and documentation names across line wrapping.
+  'Azure Architecture\s+Center\s+\|\s+Microsoft Learn',
+  'GitHub\s+Flavored\s+Markdown',
+]
+
+[files]
+exclude = []

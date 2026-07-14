@@ -49,6 +49,15 @@ Gherkin-backed tests through Rust's standard test infrastructure. See the
 [`rstest-bdd` user's guide](rstest-bdd-users-guide.md) for fixture integration,
 scenario bindings, and supported testing patterns.
 
+### Spelling policy
+
+Run `make spelling` to enforce en-GB-oxendict prose spelling. The tracked
+`typos.toml` starts from the shared estate dictionary and applies the narrow
+repository policy in `typos.local.toml`. Edit the local policy, then run
+`make spelling-config` rather than changing generated entries by hand. The
+focused shared config builder refreshes its untracked local dictionary cache
+only when the authoritative copy is newer.
+
 ### Security audit ignores
 
 Security audit jobs may set `CARGO_AUDIT_IGNORES` for narrowly scoped RustSec
