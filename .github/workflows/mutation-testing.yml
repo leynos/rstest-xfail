@@ -18,7 +18,7 @@ jobs:
     permissions:
       contents: read
       id-token: write # OIDC workflow-source resolution
-    uses: leynos/shared-actions/.github/workflows/mutation-cargo.yml@29eea2635ee0f92e42c05f4cd360b7f1a2f00b12
+    uses: leynos/shared-actions/.github/workflows/mutation-cargo.yml@18bed1ca49a6de3d8882bd72635a32ae3f023d57
     with:
       # Mirror the CI test baseline, which runs with --all-features.
       extra-args: "--all-features"
