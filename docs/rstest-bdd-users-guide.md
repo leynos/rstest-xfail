@@ -1420,10 +1420,10 @@ Tests that exercise skip-heavy flows no longer need to match on enums to verify
 that a step or scenario stopped executing. Use
 `rstest_bdd::assert_step_skipped!` to unwrap a `StepExecution::Skipped`
 outcome, optionally constraining its message, and
-`rstest_bdd::assert_scenario_skipped!` to inspect [`ScenarioStatus`][
-scenario-status] records. Both macros accept `message_absent = true` to assert
-that no message was provided and substring matching to confirm that a message
-contains the expected reason.
+`rstest_bdd::assert_scenario_skipped!` to inspect
+[`ScenarioStatus`][ scenario-status] records. Both macros accept
+`message_absent = true` to assert that no message was provided and substring
+matching to confirm that a message contains the expected reason.
 
 ```rust,no_run
 use rstest_bdd::{assert_scenario_skipped, assert_step_skipped, StepExecution};
