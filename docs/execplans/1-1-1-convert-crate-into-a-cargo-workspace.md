@@ -156,10 +156,13 @@ recorded below as they emerge.
 
 ## Progress
 
-- [ ] (pending) Stage A — orientation and manifest design ratified; this plan
-  approved.
-- [ ] (pending) Stage B — Cranelift procedural-macro spike passes; red tests in
-  place and failing for the right reason.
+- [x] (2026-08-15 02:30Z) Stage A complete — signposted docs and skills read;
+  manifest and surface design confirmed against the current tree.
+- [x] (2026-08-15 03:35Z) Stage B complete — Cranelift procedural-macro spike
+  passes under the pinned nightly; red tests authored and observed failing for
+  the right reasons (`left: {"rstest-xfail"}` member-set diff and
+  `unresolved import rstest_xfail::xfail`). See Surprises for the googletest
+  form deviation.
 - [ ] (pending) Stage C — workspace conversion implemented; red tests pass.
 - [ ] (pending) Stage D — documentation, ADR, Makefile, and refactor complete;
   full gate green.
@@ -174,10 +177,27 @@ into "done" and "remaining" rows at a stopping point.
 
 ## Surprises & discoveries
 
-None yet. Record unexpected findings here with evidence and impact as work
-proceeds. For example, confirm the exact rlib artefact name with
-`ls target/debug/` after the first `make build` rather than assuming it, and
-record the resolved `dev-dependency` versions once `cargo add` pins them.
+Record unexpected findings here with evidence and impact as work proceeds. For
+example, confirm the exact rlib artefact name with `ls target/debug/` after the
+first `make build` rather than assuming it.
+
+- **googletest matcher API differs from the reviewed snippets.** The plan's
+  `verify_that!(names, contains(eq(...)))` snippets do not compile against the
+  resolved googletest: its container matchers require `Copy` containers and
+  items, `TestAssertionFailure` does not implement `std::error::Error`, and
+  `?`-propagation from a `Result<_, Box<dyn Error>>` helper into a googletest
+  `Result` fails. Resolved `dev-dependency` versions: `rstest 0.26.1`,
+  `googletest 0.13.0` (pinned back from the default latest to match the plan's
+  stated manifest), `pretty_assertions 1.4.1`, `insta 1.48.0`,
+  `serde_json 1.0.151`, `serial_test 4.0.1`. Tests now use `assert_that!`
+  (panic-style) in `Result`-returning tests and pass `&BTreeSet<String>` to
+  `contains`; the exact-set test keeps `pretty_assertions`. The assertions'
+  meaning is unchanged; this is a form deviation recorded here.
+- **Cranelift procedural-macro spike confirms risk R1 is retired for this
+  task.** A bare `proc-macro = true` crate plus a `#[proc_macro_attribute]`
+  no-op built, and an integration test that expands and runs the attribute,
+  passed under `nightly-2026-05-28` with the dev Cranelift profile. No LLVM
+  fallback override was needed and none is added.
 
 ## Decision log
 
