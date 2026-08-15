@@ -163,7 +163,14 @@ recorded below as they emerge.
   the right reasons (`left: {"rstest-xfail"}` member-set diff and
   `unresolved import rstest_xfail::xfail`). See Surprises for the googletest
   form deviation.
-- [ ] (pending) Stage C — workspace conversion implemented; red tests pass.
+- [x] (2026-08-15 04:45Z) Stage C complete — virtual workspace manifest, three
+  member crates, and test relocations in place; `cargo metadata` lists exactly
+  the three members, `make test` is green (8 tests plus doctests), and the
+  Red-Green-Refactor evidence (member-set diff, unresolved import) has been
+  replaced by passing assertions. Note: the root `tests/` directory stays
+  because `tests/workflow_contracts/` (mutation-testing contract tests) is a
+  separate, still-valid suite; only `stub.rs` and the new metadata/surface
+  tests moved into `crates/rstest-xfail/tests/`.
 - [ ] (pending) Stage D — documentation, ADR, Makefile, and refactor complete;
   full gate green.
 - [ ] (pending) `coderabbit review --agent` run and all concerns cleared.
@@ -1023,6 +1030,18 @@ if a later toolchain fixes the backend.
 Record the Cranelift spike result, the resolved `dev-dependency` versions, and
 the first `make build` artefact name here as they are produced, so a future
 reader does not have to re-derive them.
+
+- Cranelift spike: passed. A bare `proc-macro = true` crate with a
+  `#[proc_macro_attribute]` no-op built, and a test that expands and runs the
+  attribute through a bin target, passed under `nightly-2026-05-28` with the
+  dev Cranelift profile. No LLVM fallback override added.
+- Resolved `dev-dependency` versions: `rstest 0.26.1`, `googletest 0.13.0`,
+  `pretty_assertions 1.4.1`, `insta 1.48.0`, `serde_json 1.0.151`,
+  `serial_test 4.0.1`.
+- First `make build` artefact name after the conversion:
+  `target/debug/librstest_xfail.rlib` (underscore). The facade rlib is
+  `librstest_xfail.rlib`; the Makefile `TARGET` default was repointed from the
+  obsolete hyphenated `librstest-xfail.rlib`.
 
 ## Outcomes & retrospective
 

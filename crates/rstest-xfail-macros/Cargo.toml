@@ -1,0 +1,19 @@
+[package]
+name = "rstest-xfail-macros"
+description = "Procedural macro implementation of the #[xfail] attribute for rstest-xfail"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+
+[lints]
+workspace = true

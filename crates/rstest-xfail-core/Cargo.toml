@@ -1,0 +1,16 @@
+[package]
+name = "rstest-xfail-core"
+description = "Outcome and policy types and runtime classification for rstest-xfail"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+
+[lints]
+workspace = true

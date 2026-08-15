@@ -4,7 +4,7 @@
 SHELL := bash
 
 
-TARGET ?= librstest-xfail.rlib
+TARGET ?= librstest_xfail.rlib
 
 CARGO ?= cargo
 BUILD_JOBS ?=
