@@ -1,8 +1,14 @@
-[package]
-name = "rstest-xfail"
+[workspace]
+resolver = "3"
+members = [
+    "crates/rstest-xfail-core",
+    "crates/rstest-xfail-macros",
+    "crates/rstest-xfail",
+]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
-description = "Expected failure macro attributes for rstest, async tests and rstest-bdd"
 license = "ISC"
 repository = "https://github.com/leynos/rstest-xfail"
 homepage = "https://github.com/leynos/rstest-xfail"
@@ -10,9 +16,11 @@ readme = "README.md"
 keywords = ["rust", "testing", "macros", "unit-tests"]
 categories = ["development-tools"]
 
-[dependencies]
+[workspace.dependencies]
+rstest-xfail-core = { path = "crates/rstest-xfail-core", version = "0.1.0" }
+rstest-xfail-macros = { path = "crates/rstest-xfail-macros", version = "0.1.0" }
 
-[lints.clippy]
+[workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }
 
 # 1. hygiene
@@ -74,16 +82,8 @@ missing_panics_doc                  = "deny"
 error_impl_error                    = "deny"
 result_large_err                    = "deny"
 
-[lints.rust]
+[workspace.lints.rust]
 missing_docs                        = "deny"
 
-[lints.rustdoc]
+[workspace.lints.rustdoc]
 missing_crate_level_docs            = "deny"
-
-[dev-dependencies]
-googletest = "0.13"
-insta = "1.48.0"
-pretty_assertions = "1.4.1"
-rstest = "0.26.1"
-serde_json = "1.0.151"
-serial_test = "4.0.1"

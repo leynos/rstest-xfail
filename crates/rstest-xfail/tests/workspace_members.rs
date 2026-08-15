@@ -18,7 +18,13 @@ use serial_test::serial;
 fn workspace_metadata() -> Result<serde_json::Value, Box<dyn std::error::Error>> {
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned());
     let output = Command::new(cargo)
-        .args(["metadata", "--no-deps", "--offline", "--format-version", "1"])
+        .args([
+            "metadata",
+            "--no-deps",
+            "--offline",
+            "--format-version",
+            "1",
+        ])
         .env("CARGO_NET_OFFLINE", "1")
         .output()?;
     if !output.status.success() {
@@ -79,17 +85,15 @@ fn declared_dependencies(
 
 #[test]
 #[serial]
-fn workspace_has_exactly_three_intended_members()
--> Result<(), Box<dyn std::error::Error>> {
+fn workspace_has_exactly_three_intended_members() -> Result<(), Box<dyn std::error::Error>> {
     use pretty_assertions::assert_eq;
 
     let metadata = workspace_metadata()?;
     let actual = member_names(&metadata)?;
-    let expected: BTreeSet<String> =
-        ["rstest-xfail", "rstest-xfail-core", "rstest-xfail-macros"]
-            .into_iter()
-            .map(str::to_owned)
-            .collect();
+    let expected: BTreeSet<String> = ["rstest-xfail", "rstest-xfail-core", "rstest-xfail-macros"]
+        .into_iter()
+        .map(str::to_owned)
+        .collect();
 
     assert_eq!(actual, expected, "workspace member set must match exactly");
     Ok(())
@@ -97,11 +101,16 @@ fn workspace_has_exactly_three_intended_members()
 
 #[test]
 #[serial]
-fn core_has_no_forbidden_dependencies()
--> Result<(), Box<dyn std::error::Error>> {
+fn core_has_no_forbidden_dependencies() -> Result<(), Box<dyn std::error::Error>> {
     let metadata = workspace_metadata()?;
     let deps = declared_dependencies(&metadata, "rstest-xfail-core")?;
-    for forbidden in ["rstest-xfail-macros", "rstest-xfail", "syn", "quote", "proc-macro2"] {
+    for forbidden in [
+        "rstest-xfail-macros",
+        "rstest-xfail",
+        "syn",
+        "quote",
+        "proc-macro2",
+    ] {
         // `&BTreeSet<String>` is a `Copy` container whose items are `&String`;
         // `&String: PartialEq<&str>` holds, so `eq(forbidden)` matches.
         assert_that!(&deps, not(contains(eq(forbidden))));

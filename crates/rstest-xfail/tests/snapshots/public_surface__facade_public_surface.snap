@@ -1,0 +1,5 @@
+---
+source: crates/rstest-xfail/tests/public_surface.rs
+expression: INTENDED_PUBLIC_SURFACE
+---
+rstest_xfail::xfail
