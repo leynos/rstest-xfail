@@ -14,6 +14,21 @@ sequence.
 
 ## Local Workflow
 
+### Workspace layout
+
+The repository is a Cargo workspace with three member crates under `crates/`:
+
+- `rstest-xfail-core` — the pure domain core. It must never depend on the
+  sibling crates or on procedural-macro tooling (constraint D1).
+- `rstest-xfail-macros` — the procedural-macro crate implementing `#[xfail]`.
+- `rstest-xfail` — the facade that re-exports the public surface for users.
+
+`cargo` operates across all members by default. Target one crate with
+`-p <crate>` (for example `cargo test -p rstest-xfail`). Lint and dependency
+policy are inherited from `[workspace.lints]` and `[workspace.dependencies]` in
+the virtual root manifest; individual member manifests opt in with
+`[lints] workspace = true` and `*.workspace = true`.
+
 Use `make all` as the public entrypoint for formatting, linting, and tests.
 `make lint` runs rustdoc, Clippy, and Whitaker. `make test` prefers
 `cargo nextest run` and falls back to `cargo test` when cargo-nextest is not

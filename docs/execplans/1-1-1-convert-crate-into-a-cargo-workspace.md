@@ -1,9 +1,8 @@
 # Convert the crate into a Cargo workspace (1.1.1)
 
-This ExecPlan (execution plan) is a living document. The sections
-`Constraints`, `Tolerances`, `Risks`, `Progress`, `Surprises & discoveries`,
-`Decision log`, and `Outcomes & retrospective` must be kept up to date as work
-proceeds.
+This ExecPlan (execution plan) is a living document. The sections `Constraints`,
+`Tolerances`, `Risks`, `Progress`, `Surprises & discoveries`, `Decision log`,
+and `Outcomes & retrospective` must be kept up to date as work proceeds.
 
 Status: DRAFT
 
@@ -45,8 +44,8 @@ Relevant skills (load with the `rust-router` skill as the entry point):
 
 ## Purpose / big picture
 
-After this change, the repository is a Cargo workspace with three member
-crates rather than one package:
+After this change, the repository is a Cargo workspace with three member crates
+rather than one package:
 
 - `rstest-xfail-core` — the domain library that will own the outcome and
   policy vocabulary and the classification functions (design §6). It is pure:
@@ -57,8 +56,8 @@ crates rather than one package:
   re-exports the `#[xfail]` attribute, and at this task nothing else (design
   §5).
 
-At this task the three crates hold documented placeholders only. The
-observable success is structural and is exactly the roadmap criterion: running
+At this task the three crates hold documented placeholders only. The observable
+success is structural and is exactly the roadmap criterion: running
 `cargo metadata` lists all three workspace members, and the facade re-exports
 only the intended public surface. A reader can confirm both without inspecting
 any implementation.
@@ -81,10 +80,10 @@ Hard invariants. Violation requires escalation, not a workaround.
   steps), not only a manual command.
 - **C-SURFACE-1 — placeholder surface only.** The facade re-exports only the
   placeholder `#[xfail]` attribute. The core exposes no public items at 1.1.1
-  (only its crate-level documentation), so no fictitious type is locked into the
-  public surface. No classifier types, no macro argument parsing or function
-  rewriting. Every module begins with a `//!` comment and every public item
-  carries `///` docs, because the inherited `missing_docs` and
+  (only its crate-level documentation), so no fictitious type is locked into
+  the public surface. No classifier types, no macro argument parsing or
+  function rewriting. Every module begins with a `//!` comment and every public
+  item carries `///` docs, because the inherited `missing_docs` and
   `missing_crate_level_docs` lints are set to `deny`.
 - **C-DEPS-1 — no new runtime dependencies.** This task adds only *path*
   dependencies between the three members. No new crates.io *runtime* dependency
@@ -105,8 +104,8 @@ Hard invariants. Violation requires escalation, not a workaround.
 
 ## Tolerances (exception triggers)
 
-Thresholds that trigger escalation. These bound autonomous action; they are
-not quality criteria.
+Thresholds that trigger escalation. These bound autonomous action; they are not
+quality criteria.
 
 - **Scope.** Expect roughly three crate manifests, three crate roots, one
   virtual workspace manifest, the moved test, two new tests, the new ADR, and
@@ -138,21 +137,21 @@ Stop-and-escalate triggers specific to this task:
 
 ## Risks
 
-| Risk | Severity | Likelihood | Mitigation |
-| --- | --- | --- | --- |
-| R1. The Cranelift codegen backend cannot build the procedural-macro crate. `.cargo/config.toml` sets `[profile.dev] codegen-backend = "cranelift"` workspace-wide; procedural macros are host-compiled and Cranelift's procedural-macro coverage has historically lagged the LLVM backend. CI also installs Whitaker with `--cranelift`. | High | Medium | Validate a bare `proc-macro = true` crate under the pinned nightly first (Concrete steps, Stage B). On failure, scope the LLVM backend to only `rstest-xfail-macros` via `[profile.dev.package.rstest-xfail-macros] codegen-backend = "llvm"` in `.cargo/config.toml`. Escalate per T-STOP-1 if neither works. |
-| R2. `public-api` / `cargo-public-api` rustdoc-JSON incompatibility with the pinned nightly, if adopted for the surface test. The tool consumes nightly rustdoc JSON whose format is unstable and version-locked, and `nightly-2026-05-28` may not match a published tool version. | Medium | Medium | This plan does **not** adopt `cargo-public-api` for 1.1.1 (see Decision log). The surface is documented with a lightweight reachability test plus an `insta` snapshot. A rigorous surface and SemVer lock is deferred to the publishing-boundary roadmap item. |
-| R3. The lint-table migration to `[workspace.lints]` silently drops or mistypes a lint. The root manifest carries roughly fifty hand-maintained Clippy lines plus `[lints.rust]` and `[lints.rustdoc]`. | Medium | Medium | Move the tables verbatim. Diff the pre- and post-migration `cargo clippy --workspace` inventory. Confirm each member manifest carries `[lints] workspace = true`; an omission means that crate silently runs with default lints. Escalate per T-STOP-2. |
-| R4. The Makefile `TARGET` and `build`/`release` rules reference a moved or renamed artefact. `TARGET ?= librstest-xfail.rlib` assumes a single root library, and a hyphenated crate actually produces `librstest_xfail.rlib`. | Medium | High | Repoint `TARGET` to `librstest_xfail.rlib` (the facade's artefact) and verify `make build`/`make release` produce it. The `test`, `coverage`, and `audit` targets already pass `--workspace` or derive the root from `cargo metadata` and need no change. |
-| R5. The CI workflow assumes a single crate. `.github/workflows/ci.yml` drives everything through `make` (check-fmt, lint, audit, test, coverage). | Medium | Low | The Makefile targets already use `--workspace`/`--all-targets`, so CI inherits the R3/R4 fixes. Run the gate locally and confirm no workflow edit is needed; flag if the coverage action needs a workspace flag. |
-| R6. Placeholder churn when 1.2.x and 2.1.x replace the skeleton. Placeholder roots and the moved `tests/stub.rs` will be rewritten within one or two tasks. | Low | High | Keep placeholders minimal and clearly marked disposable, mirroring the existing `tests/stub.rs` "delete this file" comment. Write no tests against placeholder *behaviour* beyond proving the no-op macro passes a body through; test only structure and reachability. Record that 1.2.1/2.1.1 must remove the stubs. |
-| R7. Tests that shell out to `cargo metadata` from inside `cargo test`/`cargo nextest` contend on the package-cache lock and can stall or run nondeterministically under parallelism. | Medium | Medium | Use `cargo metadata --no-deps --offline` with `CARGO_NET_OFFLINE=1`, keep all metadata-spawning tests in one test binary, and serialize them with `serial_test`. If flakiness persists, consolidate the metadata read into a single fetch. |
+| Risk                                                                                                                                                                                                                                                                                                                                     | Severity | Likelihood | Mitigation                                                                                                                                                                                                                                                                                                            |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1. The Cranelift codegen backend cannot build the procedural-macro crate. `.cargo/config.toml` sets `[profile.dev] codegen-backend = "cranelift"` workspace-wide; procedural macros are host-compiled and Cranelift's procedural-macro coverage has historically lagged the LLVM backend. CI also installs Whitaker with `--cranelift`. | High     | Medium     | Validate a bare `proc-macro = true` crate under the pinned nightly first (Concrete steps, Stage B). On failure, scope the LLVM backend to only `rstest-xfail-macros` via `[profile.dev.package.rstest-xfail-macros] codegen-backend = "llvm"` in `.cargo/config.toml`. Escalate per T-STOP-1 if neither works.        |
+| R2. `public-api` / `cargo-public-api` rustdoc-JSON incompatibility with the pinned nightly, if adopted for the surface test. The tool consumes nightly rustdoc JSON whose format is unstable and version-locked, and `nightly-2026-05-28` may not match a published tool version.                                                        | Medium   | Medium     | This plan does **not** adopt `cargo-public-api` for 1.1.1 (see Decision log). The surface is documented with a lightweight reachability test plus an `insta` snapshot. A rigorous surface and SemVer lock is deferred to the publishing-boundary roadmap item.                                                        |
+| R3. The lint-table migration to `[workspace.lints]` silently drops or mistypes a lint. The root manifest carries roughly fifty hand-maintained Clippy lines plus `[lints.rust]` and `[lints.rustdoc]`.                                                                                                                                   | Medium   | Medium     | Move the tables verbatim. Diff the pre- and post-migration `cargo clippy --workspace` inventory. Confirm each member manifest carries `[lints] workspace = true`; an omission means that crate silently runs with default lints. Escalate per T-STOP-2.                                                               |
+| R4. The Makefile `TARGET` and `build`/`release` rules reference a moved or renamed artefact. `TARGET ?= librstest-xfail.rlib` assumes a single root library, and a hyphenated crate actually produces `librstest_xfail.rlib`.                                                                                                            | Medium   | High       | Repoint `TARGET` to `librstest_xfail.rlib` (the facade's artefact) and verify `make build`/`make release` produce it. The `test`, `coverage`, and `audit` targets already pass `--workspace` or derive the root from `cargo metadata` and need no change.                                                             |
+| R5. The CI workflow assumes a single crate. `.github/workflows/ci.yml` drives everything through `make` (check-fmt, lint, audit, test, coverage).                                                                                                                                                                                        | Medium   | Low        | The Makefile targets already use `--workspace`/`--all-targets`, so CI inherits the R3/R4 fixes. Run the gate locally and confirm no workflow edit is needed; flag if the coverage action needs a workspace flag.                                                                                                      |
+| R6. Placeholder churn when 1.2.x and 2.1.x replace the skeleton. Placeholder roots and the moved `tests/stub.rs` will be rewritten within one or two tasks.                                                                                                                                                                              | Low      | High       | Keep placeholders minimal and clearly marked disposable, mirroring the existing `tests/stub.rs` "delete this file" comment. Write no tests against placeholder *behaviour* beyond proving the no-op macro passes a body through; test only structure and reachability. Record that 1.2.1/2.1.1 must remove the stubs. |
+| R7. Tests that shell out to `cargo metadata` from inside `cargo test`/`cargo nextest` contend on the package-cache lock and can stall or run nondeterministically under parallelism.                                                                                                                                                     | Medium   | Medium     | Use `cargo metadata --no-deps --offline` with `CARGO_NET_OFFLINE=1`, keep all metadata-spawning tests in one test binary, and serialize them with `serial_test`. If flakiness persists, consolidate the metadata read into a single fetch.                                                                            |
 
 *Table 1: Anticipated risks, with severity, likelihood, and mitigation for the
 workspace conversion.*
 
-Risks differ from surprises: risks are anticipated here; surprises are
-recorded below as they emerge.
+Risks differ from surprises: risks are anticipated here; surprises are recorded
+below as they emerge.
 
 ## Progress
 
@@ -171,8 +170,10 @@ recorded below as they emerge.
   because `tests/workflow_contracts/` (mutation-testing contract tests) is a
   separate, still-valid suite; only `stub.rs` and the new metadata/surface
   tests moved into `crates/rstest-xfail/tests/`.
-- [ ] (pending) Stage D — documentation, ADR, Makefile, and refactor complete;
-  full gate green.
+- [x] (2026-08-15 05:10Z) Stage D complete — ADR-001 written; documentation
+  updated (`repository-layout.md`, `developers-guide.md`, `contents.md`, and
+  the §5 realization note in `xfail-design.md`); Makefile `TARGET` repointed;
+  roadmap 1.1.1 checkbox ticked.
 - [ ] (pending) `coderabbit review --agent` run and all concerns cleared.
 - [ ] (pending) Roadmap 1.1.1 checkbox ticked in `docs/roadmap.md`.
 - [ ] (pending) Draft pull request opened, titled with `(1.1.1)` and linking
@@ -209,37 +210,35 @@ first `make build` rather than assuming it.
 ## Decision log
 
 - Decision: Use a **virtual workspace manifest** at the repository root with
-  members under `crates/`.
-  Rationale: the three crates are peers; none should own the root. Making the
-  facade the root package would force the core and macros crates into
-  sub-paths of the facade, which is misleading because the core has no
-  dependency on the facade. A virtual manifest keeps the root free of package
-  identity. The `crates/` directory is the conventional uniform home and
-  matches the generic `cargo metadata` walk already used by `make audit`.
+  members under `crates/`. Rationale: the three crates are peers; none should
+  own the root. Making the facade the root package would force the core and
+  macros crates into sub-paths of the facade, which is misleading because the
+  core has no dependency on the facade. A virtual manifest keeps the root free
+  of package identity. The `crates/` directory is the conventional uniform home
+  and matches the generic `cargo metadata` walk already used by `make audit`.
   Date/Author: 2026-06-24, planning team.
 - Decision: **Expose no public item from `rstest-xfail-core` at 1.1.1**; the
-  facade re-exports only the placeholder `#[xfail]` attribute.
-  Rationale: design §14 lists "whether the facade re-exports all core types or
-  only stable policy constructors" as an open question. Inventing a placeholder
-  core type to re-export would prejudge that decision and lock a meaningless
-  item into the public surface that the snapshot test then advertises as the
-  contract. The roadmap criterion's "intended public surface" at 1.1.1 is the
-  `#[xfail]` attribute alone. The facade still declares a path dependency on
+  facade re-exports only the placeholder `#[xfail]` attribute. Rationale:
+  design §14 lists "whether the facade re-exports all core types or only stable
+  policy constructors" as an open question. Inventing a placeholder core type
+  to re-export would prejudge that decision and lock a meaningless item into
+  the public surface that the snapshot test then advertises as the contract.
+  The roadmap criterion's "intended public surface" at 1.1.1 is the `#[xfail]`
+  attribute alone. The facade still declares a path dependency on
   `rstest-xfail-core` to establish the intended dependency graph; that edge is
   verified by the D1 metadata test even though no public re-export exists yet.
   Date/Author: 2026-06-24, planning team and review panel.
 - Decision: Ship a **no-op `#[xfail]` placeholder attribute** in the macros
-  crate, and prove it passes a body through unchanged.
-  Rationale: `#[xfail]` is the facade's intended surface, and a
-  `proc-macro = true` crate must export a macro to be exercised at all. A no-op
-  also de-risks R1. The design forbids a rewritten body from ever masking its
-  real outcome, so the placeholder test annotates a function with an observable
-  body and asserts the body still runs, proving the no-op does not absorb the
-  outcome. Argument parsing remains deferred to 2.1.1.
-  Date/Author: 2026-06-24, planning team and review panel.
+  crate, and prove it passes a body through unchanged. Rationale: `#[xfail]` is
+  the facade's intended surface, and a `proc-macro = true` crate must export a
+  macro to be exercised at all. A no-op also de-risks R1. The design forbids a
+  rewritten body from ever masking its real outcome, so the placeholder test
+  annotates a function with an observable body and asserts the body still runs,
+  proving the no-op does not absorb the outcome. Argument parsing remains
+  deferred to 2.1.1. Date/Author: 2026-06-24, planning team and review panel.
 - Decision: Document the facade surface with a **lightweight reachability test
-  plus an `insta` snapshot**, not `cargo-public-api`.
-  Rationale: `cargo-public-api` consumes nightly rustdoc JSON whose format is
+  plus an `insta` snapshot**, not `cargo-public-api`. Rationale:
+  `cargo-public-api` consumes nightly rustdoc JSON whose format is
   version-locked, and the repository pins a specific nightly; coupling a
   published tool version to that nightly is brittle for a surface of one
   placeholder attribute. The snapshot is a hand-maintained record of *intent*
@@ -248,32 +247,30 @@ first `make build` rather than assuming it.
   and SemVer lock belongs at the publishing boundary in a later roadmap item.
   Date/Author: 2026-06-24, planning team and review panel.
 - Decision: Add a minimal **ADR
-  `adr-001-cargo-workspace-and-crate-boundaries`** now.
-  Rationale: the crate boundary is substantive and hard to reverse, and it is
-  cited by every later task and by downstream `rstest-bdd` work. AGENTS.md and
-  the style guide both call for capturing a substantive decision in an ADR
-  referenced from the design document. No ADR exists yet, so `adr-001` is the
-  correct next sequence number; ADR numbers are assigned in creation order and
-  this plan does not reserve numbers for the 1.1.2 and 1.1.3 ADRs.
-  Date/Author: 2026-06-24, planning team and review panel.
+  `adr-001-cargo-workspace-and-crate-boundaries`** now. Rationale: the crate
+  boundary is substantive and hard to reverse, and it is cited by every later
+  task and by downstream `rstest-bdd` work. AGENTS.md and the style guide both
+  call for capturing a substantive decision in an ADR referenced from the
+  design document. No ADR exists yet, so `adr-001` is the correct next sequence
+  number; ADR numbers are assigned in creation order and this plan does not
+  reserve numbers for the 1.1.2 and 1.1.3 ADRs. Date/Author: 2026-06-24,
+  planning team and review panel.
 - Decision: Enforce the red stage with a **compile-fail import and a value
   diff**, recording the observable substitute, because Rust's stable test
-  harness has no strict expected-failure marker for these reds.
-  Rationale: the `execplans` skill asks for a strict expected-failure marker
-  where the framework supports one, or a documented substitute otherwise. The
-  reachability red is a `cargo`-refused import (`unresolved import
-  rstest_xfail::xfail`) and the member-set red is the diff
-  `left: {"rstest-xfail"}` against the three-member set; both are
-  deterministic and observable.
-  Date/Author: 2026-06-24, review panel.
+  harness has no strict expected-failure marker for these reds. Rationale: the
+  `execplans` skill asks for a strict expected-failure marker where the
+  framework supports one, or a documented substitute otherwise. The
+  reachability red is a `cargo`-refused import
+  (`unresolved import rstest_xfail::xfail`) and the member-set red is the diff
+  `left: {"rstest-xfail"}` against the three-member set; both are deterministic
+  and observable. Date/Author: 2026-06-24, review panel.
 - Decision: Set **`resolver = "3"`** in the virtual manifest and verify it with
-  `cargo metadata` immediately after writing the manifest.
-  Rationale: a virtual manifest has no package edition to infer the resolver
-  from, so the resolver must be set explicitly; edition 2024 corresponds to
-  resolver 3. The pinned nightly Cargo accepts resolver 3. The verification
-  step (Concrete steps, Stage C) catches any toolchain mismatch on the very
-  first `cargo metadata` rather than later.
-  Date/Author: 2026-06-24, review panel.
+  `cargo metadata` immediately after writing the manifest. Rationale: a virtual
+  manifest has no package edition to infer the resolver from, so the resolver
+  must be set explicitly; edition 2024 corresponds to resolver 3. The pinned
+  nightly Cargo accepts resolver 3. The verification step (Concrete steps,
+  Stage C) catches any toolchain mismatch on the very first `cargo metadata`
+  rather than later. Date/Author: 2026-06-24, review panel.
 
 ## Context and orientation
 
@@ -283,8 +280,8 @@ a single Cargo package.
 - `Cargo.toml` (root) declares `package.name = "rstest-xfail"`, edition 2024,
   version 0.1.0, and licence ISC. It carries large lint tables:
   `[lints.clippy]` (roughly fifty entries, including `pedantic` at `warn` with
-  `priority = -1` and many restriction lints set to `deny`), `[lints.rust]`
-  with `missing_docs = "deny"`, and `[lints.rustdoc]` with
+  `priority = -1` and many restriction lints set to `deny`), `[lints.rust]` with
+  `missing_docs = "deny"`, and `[lints.rustdoc]` with
   `missing_crate_level_docs = "deny"`.
 - `src/lib.rs` is a stub exposing `pub const fn greet() -> &'static str`.
 - `tests/stub.rs` is a disposable integration test that only checks
@@ -303,12 +300,13 @@ a single Cargo package.
   components.
 - `Makefile` is the public entrypoint. `make check-fmt`, `make lint`, and
   `make test` are the commit gates; `make all` runs the three in sequence.
-  `make test` prefers `cargo nextest run` and also runs `cargo test --doc
-  --workspace --all-features`. `make markdownlint`, `make nixie`, and
-  `make audit` are separate targets, not part of `make all`. `make audit`
-  derives the workspace root with `cargo metadata --no-deps --format-version 1`
-  and runs `cargo audit` once at the root. The `build` and `release` targets
-  build a file named by `TARGET ?= librstest-xfail.rlib`.
+  `make test` prefers `cargo nextest run` and also runs
+  `cargo test --doc --workspace --all-features`. `make markdownlint`,
+  `make nixie`, and `make audit` are separate targets, not part of `make all`.
+  `make audit` derives the workspace root with
+  `cargo metadata --no-deps --format-version 1` and runs `cargo audit` once at
+  the root. The `build` and `release` targets build a file named by
+  `TARGET ?= librstest-xfail.rlib`.
 - `.github/workflows/ci.yml` runs everything through `make` (check-fmt,
   markdownlint, audit, lint, and a coverage action). It never invokes
   `make build` or `make release`.
@@ -453,9 +451,9 @@ missing_docs                        = "deny"
 missing_crate_level_docs            = "deny"
 ```
 
-The `[workspace.lints.*]` tables are the current root `[lints.*]` tables
-copied verbatim, with only the table header gaining the `workspace.` prefix.
-The `priority = -1` on `pedantic` is preserved so the explicit per-lint `deny`
+The `[workspace.lints.*]` tables are the current root `[lints.*]` tables copied
+verbatim, with only the table header gaining the `workspace.` prefix. The
+`priority = -1` on `pedantic` is preserved so the explicit per-lint `deny`
 entries override the group `warn`. The `authors`, `description`, and
 `rust-version` keys are intentionally not added to `[workspace.package]`
 because the current manifest does not set them and each crate carries its own
@@ -539,12 +537,14 @@ serial_test = "3"
 workspace = true
 ```
 
-Resolve the `dev-dependencies` to current caret versions at implementation
-time with `cargo add --dev rstest googletest pretty_assertions insta serde_json
-serial_test`, then record the resolved versions in `Surprises & discoveries`.
-The string form `insta::assert_snapshot!` used below needs no `insta` feature
-flag; do not add one. No feature flag is required for the `googletest`
-matchers `contains`, `eq`, and `not`.
+Resolve the `dev-dependencies` to current caret versions at implementation time
+with
+`cargo add --dev rstest googletest pretty_assertions insta serde_json
+serial_test`,
+then record the resolved versions in `Surprises & discoveries`. The string form
+`insta::assert_snapshot!` used below needs no `insta` feature flag; do not add
+one. No feature flag is required for the `googletest` matchers `contains`,
+`eq`, and `not`.
 
 The crate roots expose exactly these public items.
 
@@ -630,11 +630,11 @@ they fail for the right reason before the workspace exists. Add the test-only
 - Add `tests/workspace_members.rs` in its final form (Concrete steps). Against
   the single package, `cargo metadata` reports one member, so the set assertion
   fails with the diff `left: {"rstest-xfail"}` — not a parse error.
-- Add a *minimal* `tests/public_surface.rs` containing only `use
-  rstest_xfail::xfail;` and a trivial test that applies `#[xfail]`. Against the
-  current crate, `rstest_xfail::xfail` does not exist, so it fails to compile
-  with `unresolved import rstest_xfail::xfail`, the correct red for a
-  reachability contract. The snapshot and body-pass-through assertions are
+- Add a *minimal* `tests/public_surface.rs` containing only
+  `use rstest_xfail::xfail;` and a trivial test that applies `#[xfail]`.
+  Against the current crate, `rstest_xfail::xfail` does not exist, so it fails
+  to compile with `unresolved import rstest_xfail::xfail`, the correct red for
+  a reachability contract. The snapshot and body-pass-through assertions are
   added in Stage D, not now.
 
 ### Stage C — implement the workspace (minimal change to go green)
@@ -665,8 +665,8 @@ Both red tests now pass. Run `make test` to confirm.
    test to `crates/rstest-xfail/tests/workspace_members.rs`.
 3. Write `docs/adr-001-cargo-workspace-and-crate-boundaries.md`.
 4. Update `docs/repository-layout.md`, `docs/developers-guide.md`,
-   `docs/contents.md`, and add the one-line realization note plus ADR
-   reference to `docs/xfail-design.md` §5.
+   `docs/contents.md`, and add the one-line realization note plus ADR reference
+   to `docs/xfail-design.md` §5.
 5. Run the full gate (`make check-fmt`, `make lint`, `make test`,
    `make markdownlint`, `make nixie`, `make audit`), then
    `coderabbit review --agent`, and clear all concerns.
@@ -832,9 +832,10 @@ fn each_intended_member_is_present(
 The matchers are imported narrowly (`contains`, `eq`, `not`, `verify_that`)
 rather than via `use googletest::prelude::*`, because the glob brings a
 single-parameter `Result` alias into scope that would clash with the two-
-parameter `Result<_, Box<dyn std::error::Error>>` helper signatures. `--no-deps`
-keeps each package's declared `dependencies` array available while omitting the
-resolved graph, which is what both the member-set and D1 checks need.
+parameter `Result<_, Box<dyn std::error::Error>>` helper signatures.
+`--no-deps` keeps each package's declared `dependencies` array available while
+omitting the resolved graph, which is what both the member-set and D1 checks
+need.
 
 ### The facade public-surface test
 
@@ -921,9 +922,9 @@ decision, not strictness (1.1.2) or async (1.1.3):
   `crates/`, with a virtual workspace root, `[workspace.lints]` inheritance,
   and dependency rule D1.
 - **Known risks and limitations:** the Cranelift-on-procedural-macro build
-  risk (R1) and placeholder churn until 1.2.x (R6) are noted as follow-ups.
-  The facade re-export scope (design §14) is recorded as a deferred decision,
-  not decided here.
+  risk (R1) and placeholder churn until 1.2.x (R6) are noted as follow-ups. The
+  facade re-export scope (design §14) is recorded as a deferred decision, not
+  decided here.
 
 Add a one-line pointer to this ADR from `docs/xfail-design.md` §5 and link it
 from `docs/contents.md` under a new `## Decision records` group.
@@ -1057,11 +1058,11 @@ Initial draft, 2026-06-24. Authored from the technical design §§5-6, the
 roadmap §1.1.1, and a planning team analysis covering the workspace manifest,
 the test strategy, and the architecture, documentation, and risk surface, then
 revised after a community-of-experts review. The review removed a fictitious
-placeholder core type (it prejudged design §14), fixed two lint and
-compilation defects in the test snippets (`unfulfilled_lint_expectations` on a
-used import; a `Result` alias clash from a `googletest` glob import), added an
-automated D1 purity gate, hardened the placeholder-macro test to prove genuine
-body pass-through, corrected the red-stage sequencing, captioned the risk
-table, added the draft-PR delivery step, and enumerated the actual gate set in
-the acceptance criteria. No implementation has begun; the plan awaits approval
-per the `Approval gate` discipline in the `execplans` skill.
+placeholder core type (it prejudged design §14), fixed two lint and compilation
+defects in the test snippets (`unfulfilled_lint_expectations` on a used import;
+a `Result` alias clash from a `googletest` glob import), added an automated D1
+purity gate, hardened the placeholder-macro test to prove genuine body
+pass-through, corrected the red-stage sequencing, captioned the risk table,
+added the draft-PR delivery step, and enumerated the actual gate set in the
+acceptance criteria. No implementation has begun; the plan awaits approval per
+the `Approval gate` discipline in the `execplans` skill.
