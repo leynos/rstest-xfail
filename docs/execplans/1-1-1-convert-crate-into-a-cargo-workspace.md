@@ -174,7 +174,8 @@ below as they emerge.
   updated (`repository-layout.md`, `developers-guide.md`, `contents.md`, and
   the §5 realization note in `xfail-design.md`); Makefile `TARGET` repointed;
   roadmap 1.1.1 checkbox ticked.
-- [ ] (pending) `coderabbit review --agent` run and all concerns cleared.
+- [x] (2026-08-15 05:30Z) `coderabbit review --agent` run and all concerns
+  cleared (0 findings across 20 reviewed files).
 - [x] (2026-08-15 05:15Z) Roadmap 1.1.1 checkbox ticked in `docs/roadmap.md`
   (the `- [x] 1.1.1.` line).
 - [ ] (pending) Draft pull request opened, titled with `(1.1.1)` and linking
