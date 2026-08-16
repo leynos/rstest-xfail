@@ -178,8 +178,9 @@ below as they emerge.
   cleared (0 findings across 20 reviewed files).
 - [x] (2026-08-15 05:15Z) Roadmap 1.1.1 checkbox ticked in `docs/roadmap.md`
   (the `- [x] 1.1.1.` line).
-- [ ] (pending) Draft pull request opened, titled with `(1.1.1)` and linking
-  this execplan.
+- [x] (2026-08-15 05:45Z) Draft pull request #12 opened/updated with title
+  `Convert the crate into a Cargo workspace (1.1.1)`, linking this execplan
+  and roadmap §1.1.1; branch pushed (5 implementation commits).
 
 Replace `(pending)` with a UTC timestamp as each row completes, for example
 `- [x] (2026-06-24 14:00Z) Stage B complete.` Split any partially completed row
@@ -1048,11 +1049,29 @@ reader does not have to re-derive them.
 
 ## Outcomes & retrospective
 
-To be completed at task completion. Compare the result against the purpose:
-three workspace members visible to `cargo metadata`, a facade exposing only the
-intended surface, and a pure core satisfying D1. Note any deviation from this
-plan and the reason, and any lesson for the 1.2.x and 2.1.x tasks that build on
-this skeleton.
+Task 1.1.1 is delivered. `cargo metadata` lists exactly the three workspace
+members (`rstest-xfail`, `rstest-xfail-core`, `rstest-xfail-macros`), the
+facade re-exports only `rstest_xfail::xfail` (snapshot + reachability test),
+and constraint D1 is enforced by the `core_has_no_forbidden_dependencies`
+test. All deterministic gates and a 0-finding CodeRabbit review pass.
+
+Deviations from the plan, all recorded above:
+
+- The root `tests/` directory is retained because `tests/workflow_contracts/`
+  is a separate, still-valid mutation-testing contract suite; only the Rust
+  integration tests moved into the facade crate.
+- googletest resolved to 0.13 and its container matchers require `Copy`
+  containers; the D1/presence assertions use `assert_that!` over
+  `&BTreeSet<String>` rather than the plan's `verify_that!` form. The
+  assertions' meaning is unchanged.
+- The final public_surface test applies the placeholder attribute to a `const
+  fn` solely to satisfy `clippy::missing_const_for_fn`; this does not change
+  the reachability or body-pass-through contract.
+
+Lesson for 1.2.x and 2.1.x: the workspace skeleton, D1 purity gate, and the
+surface snapshot give the follow-up tasks a stable boundary to build on. The
+googletest API drift is a reminder to pin mutually consistent matcher APIs in
+the plan's reviewed snippets.
 
 ## Revision note
 
