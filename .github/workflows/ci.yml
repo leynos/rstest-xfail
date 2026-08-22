@@ -22,7 +22,7 @@ jobs:
           # harmless while that step is deferred (see coverage comment below).
           fetch-depth: 0
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@57a33fa65e329db7edc81ece661f1a2e1d39868f
+        uses: leynos/shared-actions/.github/actions/setup-rust@a42afcf10cf18a6af7c6c2ec2b30c4209bc8c8cd
       - name: Install mold linker
         if: runner.os == 'Linux'
         run: |
@@ -34,14 +34,14 @@ jobs:
       - name: Format
         run: make check-fmt
       - name: Markdown lint
-        uses: DavidAnson/markdownlint-cli2-action@a18930711014a571a022475791b44bcbb56dfb45
+        uses: DavidAnson/markdownlint-cli2-action@84611f6fdd14490f100dd3f9fc9df32c24ccbeb6
         with:
           globs: |
             **/*.md
             !**/target/**
             !**/dist/**
       - name: Setup uv
-        uses: astral-sh/setup-uv@696e4e1bf2f38a7ac027afc72ca9d963427412ae
+        uses: astral-sh/setup-uv@19b4d1e990bec64818914c40230bde93a0de300b
       - name: Install Markdown diagram tooling
         run: |
           uv tool install nixie-cli==1.1.0
@@ -103,7 +103,7 @@ jobs:
           echo "Coverage CFLAGS: -fuse-ld=lld"
           echo "Coverage LDFLAGS: -fuse-ld=lld"
       - name: Test and Measure Coverage
-        uses: leynos/shared-actions/.github/actions/generate-coverage@57a33fa65e329db7edc81ece661f1a2e1d39868f
+        uses: leynos/shared-actions/.github/actions/generate-coverage@a42afcf10cf18a6af7c6c2ec2b30c4209bc8c8cd
         env:
           CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: clang
           RUSTFLAGS: -C link-arg=-fuse-ld=lld
@@ -117,7 +117,7 @@ jobs:
         env:
           CS_ACCESS_TOKEN: ${{ secrets.CS_ACCESS_TOKEN }}
         if: env.CS_ACCESS_TOKEN != '' && github.event_name == 'pull_request'
-        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@57a33fa65e329db7edc81ece661f1a2e1d39868f
+        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@a42afcf10cf18a6af7c6c2ec2b30c4209bc8c8cd
         with:
           format: lcov
           mode: check
