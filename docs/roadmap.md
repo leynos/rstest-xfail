@@ -23,7 +23,7 @@ core classification contract without depending on procedural macro expansion.
 This step answers which APIs are stable enough for downstream use. It informs
 all macro and BDD work because both depend on the core outcome vocabulary.
 
-- [ ] 1.1.1. Convert the crate into a Cargo workspace with
+- [x] 1.1.1. Convert the crate into a Cargo workspace with
   `rstest-xfail-core`, `rstest-xfail-macros`, and the `rstest-xfail` facade.
   - See xfail-design.md §§5-6.
   - Success: `cargo metadata` shows all three workspace crates and the facade
