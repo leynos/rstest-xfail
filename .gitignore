@@ -9,10 +9,14 @@ __pycache__/
 .uv-tools/
 .typos-oxendict-base.json
 .typos-oxendict-base.toml
+
+# Local agent tool state
 .vtcode/
 .claude/
 .memdb/
 .grepai/
+
+# Editor artefacts
 *.swp
 *.swo
 *~
