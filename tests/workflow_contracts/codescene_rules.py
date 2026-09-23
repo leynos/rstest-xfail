@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import copy
 import itertools
+import re
 import typing as typ
 
 import codescene_reading as reading
@@ -38,6 +39,7 @@ TOKEN_INPUT = "${{ secrets.CS_ACCESS_TOKEN }}"
 # could finish after a newer push and upload older coverage last.
 CONCURRENCY_GROUP = "${{ github.workflow }}-${{ github.ref }}"
 CHECK_KEYS = frozenset({"name", "id", "run"})
+_QUOTED = re.compile(r"('[^']*')")
 
 
 def step_input(step: reading.Step, key: str) -> object:
@@ -94,31 +96,48 @@ def is_upload(step: reading.Step) -> bool:
 
 
 def pull_request_findings(workflow: reading.Workflow) -> list[str]:
-    """Return the reasons a workflow a pull request can reach breaches CV-005.
+    """Return the reasons a workflow a pull request can reach breaches CV-005."""
+    findings = _text_findings(workflow) + _call_findings(workflow)
+    for step in reading.steps(workflow):
+        findings.extend(_pull_request_step_findings(step))
+    return findings
+
+
+def _text_findings(workflow: reading.Workflow) -> list[str]:
+    """Return the reasons found by reading the whole workflow as text.
 
     The token and host clauses read every scalar, case-folded for the host,
     so a workflow-level ``defaults.run.shell`` or a callee's
     ``workflow_call`` secret declaration cannot pass unseen.
     """
     text = reading.rendered(workflow)
-    findings = []
-    if ACCESS_TOKEN in text:
-        findings.append(f"a pull-request lane receives {ACCESS_TOKEN}")
-    if reading.computes_a_secret(text):
-        findings.append("a pull-request lane reaches a secret by a computed name")
-    if CODESCENE_HOST in text.lower():
-        findings.append(f"a pull-request lane contacts {CODESCENE_HOST}")
-    for job_id, job in reading.jobs(workflow):
-        if job.get("secrets") == "inherit":
-            findings.append(f"job {job_id} forwards every secret with secrets: inherit")
-    for job_id, reference in reading.job_calls(workflow):
-        if reading.classify_call(reference)[0] == reading.REFUSED:
-            findings.append(
-                f"job {job_id} calls {reference!r}, which resolves to no workflow here"
-            )
-    for step in reading.steps(workflow):
-        findings.extend(_pull_request_step_findings(step))
-    return findings
+    checks = (
+        (ACCESS_TOKEN in text, f"a pull-request lane receives {ACCESS_TOKEN}"),
+        (
+            reading.computes_a_secret(text),
+            "a pull-request lane reaches a secret by a computed name",
+        ),
+        (
+            CODESCENE_HOST in text.lower(),
+            f"a pull-request lane contacts {CODESCENE_HOST}",
+        ),
+    )
+    return [finding for failed, finding in checks if failed]
+
+
+def _call_findings(workflow: reading.Workflow) -> list[str]:
+    """Return the reasons found in the workflow's job-level calls."""
+    inherits = [
+        f"job {job_id} forwards every secret with secrets: inherit"
+        for job_id, job in reading.jobs(workflow)
+        if job.get("secrets") == "inherit"
+    ]
+    refused = [
+        f"job {job_id} calls {reference!r}, which resolves to no workflow here"
+        for job_id, reference in reading.job_calls(workflow)
+        if reading.classify_call(reference)[0] == reading.REFUSED
+    ]
+    return inherits + refused
 
 
 def _pull_request_step_findings(step: reading.Step) -> list[str]:
@@ -151,6 +170,14 @@ def publishes_from_main(workflow: reading.Workflow) -> bool:
     )
 
 
+def _unwrap(condition: str) -> str:
+    """Return a condition without its ``${{ }}`` wrapper, if it has one."""
+    body = condition.strip()
+    if body.startswith("${{") and body.endswith("}}"):
+        return body[3:-2]
+    return body
+
+
 def conjuncts(condition: str) -> list[str] | None:
     """Return the conjuncts of an ``if:`` condition, or ``None`` if it has ``||``.
 
@@ -158,25 +185,15 @@ def conjuncts(condition: str) -> list[str] | None:
     and an ``&&`` inside one does not split. A disjunction anywhere makes
     every conjunct optional, which is why it is refused rather than parsed.
     """
-    body = condition.strip()
-    if body.startswith("${{") and body.endswith("}}"):
-        body = body[3:-2]
+    # Splitting on a captured group alternates unquoted and quoted segments.
+    segments = _QUOTED.split(_unwrap(condition))
+    if any("||" in segment for segment in segments[::2]):
+        return None
     parts = [""]
-    in_quote = False
-    index = 0
-    while index < len(body):
-        character = body[index]
-        is_doubled = not in_quote and body[index : index + 2] in ("||", "&&")
-        if is_doubled and character == "|":
-            return None
-        if is_doubled:
-            parts.append("")
-            index += 2
-            continue
-        if character == "'":
-            in_quote = not in_quote
-        parts[-1] += character
-        index += 1
+    for index, segment in enumerate(segments):
+        pieces = segment.split("&&") if index % 2 == 0 else [segment]
+        parts[-1] += pieces[0]
+        parts.extend(pieces[1:])
     return [" ".join(part.split()) for part in parts]
 
 
@@ -292,6 +309,21 @@ def _concurrency_findings(workflow: reading.Workflow) -> list[str]:
     return findings
 
 
+def _every_guard_finding(workflow: reading.Workflow) -> list[str]:
+    """Return the reasons any upload in the publisher is unguarded.
+
+    Each upload is judged against the steps before it in its own job, since
+    a step's outputs are visible only to later steps.
+    """
+    return [
+        finding
+        for _, job in reading.jobs(workflow)
+        for position, step in enumerate(reading.job_steps(job))
+        if is_upload(step)
+        for finding in _guard_findings(step, reading.job_steps(job)[:position])
+    ]
+
+
 def publisher_findings(workflow: reading.Workflow) -> list[str]:
     """Return the reasons a main publisher fails to publish as CV-005 requires."""
     every_step = reading.steps(workflow)
@@ -300,11 +332,7 @@ def publisher_findings(workflow: reading.Workflow) -> list[str]:
         findings.append("the main publisher generates no ratcheted coverage")
     if not any(is_upload(step) for step in every_step):
         findings.append("the main publisher uploads nothing to CodeScene")
-    for _, job in reading.jobs(workflow):
-        listed = reading.job_steps(job)
-        for position, step in enumerate(listed):
-            if is_upload(step):
-                findings.extend(_guard_findings(step, listed[:position]))
+    findings.extend(_every_guard_finding(workflow))
     findings.extend(_token_findings(workflow))
     findings.extend(_concurrency_findings(workflow))
     return findings

@@ -183,9 +183,12 @@ def classify_call(reference: str) -> tuple[str, str]:
     if not path.startswith(WORKFLOW_PREFIX):
         return (REMOTE, "")
     file = path[len(WORKFLOW_PREFIX) :]
-    if not file or "/" in file or "@" in file:
-        return (REFUSED, "")
-    return (LOCAL, file)
+    return (LOCAL, file) if _names_one_file(file) else (REFUSED, "")
+
+
+def _names_one_file(file: str) -> bool:
+    """Return whether ``file`` names one workflow, with no directory or ``@ref``."""
+    return bool(file) and not any(mark in file for mark in "/@")
 
 
 def job_calls(workflow: Workflow) -> list[tuple[str, str]]:
