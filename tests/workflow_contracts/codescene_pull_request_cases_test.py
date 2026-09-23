@@ -59,6 +59,7 @@ def test_the_pull_request_rule_counts_each_breach(source: str, expected: int) ->
     "job",
     [
         "steps:\n  - run: echo ${{ secrets.CS_ACCESS_TOKEN }}\n",
+        "steps:\n  - run: echo ${{ secrets.cs_access_token }}\n",
         "steps:\n  - run: |\n      # ${{ secrets.CS_ACCESS_TOKEN }}\n      true\n",
         "steps:\n  - uses: x/y@abc\n    with:\n      t: ${{ secrets.CS_ACCESS_TOKEN }}\n",
         "env:\n  T: ${{ secrets.CS_ACCESS_TOKEN }}\nsteps:\n  - run: 'true'\n",
@@ -69,6 +70,7 @@ def test_the_pull_request_rule_counts_each_breach(source: str, expected: int) ->
     ],
     ids=[
         "run_body",
+        "lower_case",
         "block_scalar",
         "action_input",
         "env_value",
@@ -233,7 +235,7 @@ def test_an_ambiguous_document_is_refused(source: str, reason: str) -> None:
     ("name", "expected"),
     [("ci.yml", True), ("ci.YML", True), ("ci.Yaml", True), ("ci.json", False)],
 )
-def test_workflow_files_are_recognised_in_any_case(name: str, expected: bool) -> None:
+def test_workflow_files_are_recognized_in_any_case(name: str, expected: bool) -> None:
     """A case-sensitive comparison would skip a ``.YML`` workflow in silence."""
     assert reading.is_workflow(name) is expected
 

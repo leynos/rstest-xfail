@@ -23,8 +23,9 @@ import codescene_reading as reading
 
 UPLOAD_ACTION = "leynos/shared-actions/.github/actions/upload-codescene-coverage"
 COVERAGE_ACTION = "leynos/shared-actions/.github/actions/generate-coverage"
+# Upper-cased: GitHub resolves secret names without regard to case.
 ACCESS_TOKEN = "CS_ACCESS_TOKEN"
-SECRET_REFERENCE = "secrets.CS_ACCESS_TOKEN"
+SECRET_REFERENCE = "SECRETS.CS_ACCESS_TOKEN"
 COVERAGE_CLI = "cs-coverage"
 CODESCENE_HOST = "codescene.io"
 MAIN_REF_GUARD = "github.ref == 'refs/heads/main'"
@@ -40,6 +41,16 @@ TOKEN_INPUT = "${{ secrets.CS_ACCESS_TOKEN }}"
 CONCURRENCY_GROUP = "${{ github.workflow }}-${{ github.ref }}"
 CHECK_KEYS = frozenset({"name", "id", "run"})
 _QUOTED = re.compile(r"('[^']*')")
+
+
+def mentions_the_token(text: str) -> bool:
+    """Return whether ``text`` names the token, in any case."""
+    return ACCESS_TOKEN in text.upper()
+
+
+def references_the_secret(text: str) -> bool:
+    """Return whether ``text`` references the secret itself, in any case."""
+    return SECRET_REFERENCE in text.upper()
 
 
 def step_input(step: reading.Step, key: str) -> object:
@@ -86,11 +97,11 @@ def _runs_cli_upload(run: str) -> bool:
 def is_upload(step: reading.Step) -> bool:
     """Return whether a step uploads to CodeScene, by the action or the CLI.
 
-    ``upload`` is the action's default mode, so an absent mode is an upload,
-    and ``check`` is not one.
+    Only the literal ``check`` mode is not one: an absent mode (the default is
+    ``upload``) and an expression both count, so an unreadable upload is judged.
     """
     mode = step_input(step, "mode")
-    action = is_upload_action(step) and mode in (None, "upload")
+    action = is_upload_action(step) and mode != "check"
     run = step.get("run")
     return action or (isinstance(run, str) and _runs_cli_upload(run))
 
@@ -112,7 +123,7 @@ def _text_findings(workflow: reading.Workflow) -> list[str]:
     """
     text = reading.rendered(workflow)
     checks = (
-        (ACCESS_TOKEN in text, f"a pull-request lane receives {ACCESS_TOKEN}"),
+        (mentions_the_token(text), f"a pull-request lane receives {ACCESS_TOKEN}"),
         (
             reading.computes_a_secret(text),
             "a pull-request lane reaches a secret by a computed name",
@@ -256,7 +267,7 @@ def _forwards_the_token(job: dict[typ.Any, typ.Any]) -> bool:
     if "uses" not in job:
         return False
     names_it = any(
-        SECRET_REFERENCE in reading.rendered(job.get(key))
+        references_the_secret(reading.rendered(job.get(key)))
         for key in ("with", "secrets")
     )
     return job.get("secrets") == "inherit" or names_it
@@ -267,7 +278,7 @@ def _token_findings(workflow: reading.Workflow) -> list[str]:
     findings = [
         f"{scope} binds {ACCESS_TOKEN} in its env"
         for scope, env in _env_blocks(workflow)
-        if ACCESS_TOKEN in reading.rendered(env)
+        if mentions_the_token(reading.rendered(env))
     ]
     findings.extend(
         f"job {job_id} forwards {ACCESS_TOKEN} to a reusable workflow"
@@ -277,7 +288,7 @@ def _token_findings(workflow: reading.Workflow) -> list[str]:
     if reading.computes_a_secret(reading.rendered(workflow)):
         findings.append("the publisher reaches a secret by a computed name")
     if any(
-        SECRET_REFERENCE in _rendered_outside_allowance(step)
+        references_the_secret(_rendered_outside_allowance(step))
         for step in reading.steps(workflow)
     ):
         findings.append(

@@ -204,6 +204,16 @@ def test_a_check_after_the_upload_does_not_guard_it() -> None:
         ),
         ("jobs:\n", REUSABLE + "    secrets: inherit\n", ("reusable workflow",)),
         (
+            "    steps:\n",
+            "    env:\n      cs_access_token: ${{ secrets.cs_access_token }}\n    steps:\n",
+            ("binds CS_ACCESS_TOKEN",),
+        ),
+        (
+            UPLOAD_NAME,
+            "      - run: echo ${{ secrets.cs_access_token }}\n" + UPLOAD_NAME,
+            ("referenced outside",),
+        ),
+        (
             UPLOAD_NAME,
             "      - run: echo ${{ secrets['CS_ACCESS_TOKEN'] }}\n" + UPLOAD_NAME,
             ("computed name",),
@@ -217,13 +227,18 @@ def test_a_check_after_the_upload_does_not_guard_it() -> None:
         "forwarded_as_input",
         "forwarded_by_name",
         "forwarded_by_inheritance",
+        "lower_case_env",
+        "lower_case_run_step",
         "computed",
     ],
 )
 def test_the_token_travels_only_where_allowed(
     old: str, new: str, expected: tuple[str, ...]
 ) -> None:
-    """The composite upload hands its env to nested steps: no env anywhere."""
+    """No env anywhere, however the name is cased.
+
+    The composite upload hands its step's env to the nested steps it runs.
+    """
     _names_exactly(rules.publisher_findings(_vary(old, new)), expected)
 
 
@@ -272,6 +287,17 @@ def test_a_continued_cli_upload_is_still_an_upload() -> None:
     r"""The shell joins ``cs-coverage \`` and ``upload`` into one command."""
     extra = (
         "      - run: |\n          cs-coverage \\\n            upload --format lcov\n"
+    )
+    findings = rules.publisher_findings(reading.parse("fixture", PUBLISHER + extra))
+    _names_exactly(findings, ("no condition",))
+
+
+def test_an_expression_mode_is_still_an_upload() -> None:
+    """Only the literal ``check`` mode is not an upload, so this one is judged."""
+    extra = (
+        "      - uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@abc\n"
+        "        with:\n          mode: ${{ 'upload' }}\n"
+        "          access-token: ${{ secrets.CS_ACCESS_TOKEN }}\n"
     )
     findings = rules.publisher_findings(reading.parse("fixture", PUBLISHER + extra))
     _names_exactly(findings, ("no condition",))
