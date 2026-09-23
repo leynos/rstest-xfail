@@ -204,11 +204,11 @@ def _token_check_id(step: reading.Step) -> str | None:
     that merely contains it (``false && ...``) never writes the output.
     """
     run = step.get("run")
-    is_exact = isinstance(run, str) and run.strip() == CHECK_COMMAND
     step_id = step.get("id")
-    if is_exact and set(step) <= CHECK_KEYS and isinstance(step_id, str):
-        return step_id
-    return None
+    if not isinstance(run, str) or not set(step) <= CHECK_KEYS:
+        return None
+    is_exact = run.strip() == CHECK_COMMAND
+    return step_id if is_exact and isinstance(step_id, str) else None
 
 
 def _guard_findings(upload: reading.Step, earlier: list[reading.Step]) -> list[str]:

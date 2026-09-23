@@ -213,12 +213,16 @@ def closure(
     reached = {name for name, workflow in every.items() if seeds(workflow)}
     pending = list(reached)
     while pending:
-        for _, reference in job_calls(every[pending.pop()]):
-            kind, callee = classify_call(reference)
-            if kind == LOCAL and callee in every and callee not in reached:
-                reached.add(callee)
-                pending.append(callee)
+        fresh = (_local_callees(every[pending.pop()]) & every.keys()) - reached
+        reached |= fresh
+        pending.extend(fresh)
     return reached
+
+
+def _local_callees(workflow: Workflow) -> set[str]:
+    """Return the local workflows ``workflow`` calls, by file name."""
+    calls = (classify_call(reference) for _, reference in job_calls(workflow))
+    return {callee for kind, callee in calls if kind == LOCAL}
 
 
 def pull_request_closure(every: dict[str, Workflow]) -> set[str]:
@@ -279,8 +283,10 @@ def computes_a_secret(text: str) -> bool:
         following = text[start + len("secrets") :].lstrip()
         after = following[:1]
         is_word_start = not before or not (before.isalnum() or before in "_.")
+        # A following word makes it prose ("keeps secrets out of logs").
         is_prose = after.isalnum() or after == "_"
-        if is_word_start and not is_prose and after not in (".", ":", ""):
+        is_expression = after not in (".", ":", "") and not is_prose
+        if is_word_start and is_expression:
             return True
         start = text.find("secrets", start + 1)
     return False
