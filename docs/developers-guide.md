@@ -101,3 +101,44 @@ def test_uses_pinned_full_sha(caller_step):
 If a workflow's behaviour genuinely depends on a feature only present from a
 particular commit onwards, express that as a comment or a changelog note, not
 as a test assertion on the SHA string.
+
+### Coverage publication
+
+Main owns both persistent coverage outputs, following concordat's CV-005 rule.
+Pull requests measure coverage in `ci.yml` with `with-ratchet: 'true'` and
+`publish-artefact: 'false'`, so they check the ratchet against the stored
+baseline and do nothing else: no pull request uploads a report, runs
+`cs-coverage`, receives `CS_ACCESS_TOKEN`, or contacts `codescene.io`.
+CodeScene accepts an upload only for an analysed branch, which a pull request
+head is not, and its check mode fails on every project whose coverage gates are
+off. What the split takes off the pull request is the call to the service; the
+CLI archive is already pinned by digest.
+
+`.github/workflows/coverage-main.yml` is the one publisher. It runs on a push to
+`main` and on dispatch, writes the ratchet baseline, and uploads to CodeScene
+only when both hold:
+
+- a `Check CodeScene token` step, whose sole command is
+  `echo "available=${{ secrets.CS_ACCESS_TOKEN != '' }}" >> "$GITHUB_OUTPUT"`,
+  reports the token as set; the expression is evaluated before the shell runs,
+  so the step binds nothing;
+- `github.ref == 'refs/heads/main'`, since a dispatch may name any branch.
+
+The upload passes the token only as `access-token`, never through an `env`: the
+upload action is composite and hands its step's `env` to the nested steps it
+runs. The concurrency group is `${{ github.workflow }}-${{ github.ref }}` and
+never cancels, so runs never overlap, uploads land in commit order, and the
+newest baseline wins. Two gaps are known and accepted. A Dependabot pull
+request merged by the automerge workflow with `GITHUB_TOKEN` fires no push, so
+it publishes nothing until the next push to `main` (shared-actions #518). A
+dispatch that replaces a pending push uploads the same or a newer commit, but
+`generate-coverage` saves the baseline only on a push, so the baseline stays
+one commit behind until the next push.
+
+`make test-workflow-contracts` holds the rule through the `codescene_*` modules
+in `tests/workflow_contracts/`. They prove each clause against breaching
+fixtures as well as against the real workflows: the pull-request clauses run
+over every workflow a pull request can reach through local `uses:` calls, the
+host and token clauses read every scalar in each document, the upload condition
+is split on `&&` with any `||` refused, and workflows are parsed with duplicate
+keys refused.
