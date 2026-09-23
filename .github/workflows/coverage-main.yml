@@ -23,12 +23,15 @@ name: Coverage (main)
 
 # One group per ref, never cancelled. A cancelled publisher abandons both its
 # upload and its baseline write. With cancellation off, runs never overlap and
-# a newer trigger replaces any pending run, so uploads land in commit order and
-# the newest baseline wins. Keying the group on the event as well would let an
-# earlier dispatch finish after a newer push and upload older coverage last. A
-# dispatch that replaces a pending push uploads the same or a newer commit, but
+# a newer trigger replaces any pending run, so for triggered runs (push and
+# dispatch) uploads land in commit order and the newest baseline wins. A manual
+# "Re-run jobs" on an older main run is an operator action: it keeps its old
+# SHA and republishes that commit's coverage and baseline until the next push
+# supersedes it. Keying the group on the event as well would let an earlier
+# dispatch finish after a newer push and upload older coverage last. A dispatch
+# that replaces a pending push uploads the same or a newer commit, but
 # generate-coverage saves the baseline only on a push, so the baseline stays
-# one commit behind until the next push.
+# one commit behind until the next push (shared-actions #518).
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
