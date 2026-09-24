@@ -12,6 +12,7 @@ These tests hold the split:
 
 - no step in any workflow or local composite action runs the suite, in any
   spelling ``suite_commands`` recognizes, except the one doctest step;
+- ``ci.yml`` runs on every pull request, with no branch or path filter;
 - that doctest step is in ``build-test``, carries the flags ``make test``
   gives its doctest line, and neither the job nor the step has an ``if:``;
 - ``build-test`` runs the coverage action in one unguarded step, with its
@@ -76,6 +77,15 @@ def _suite_job() -> dict:
     return job
 
 
+def _ci_triggers() -> dict:
+    """Return ``ci.yml``'s triggers, read under ``on`` or its boolean form."""
+    document = _documents()[SUITE_JOB[0]]
+    value = document.get("on", document.get(True))
+    if isinstance(value, dict):
+        return value
+    return dict.fromkeys(value if isinstance(value, list) else [value])
+
+
 def _dependency_tables(manifest: dict) -> list[dict]:
     """Return a manifest's dependency tables, platform-specific ones included."""
     scopes = [manifest, *(manifest.get("target") or {}).values()]
@@ -128,6 +138,13 @@ def _features(manifest: dict) -> list[str]:
         ("cargo nextest run --all-targets", True),
         ("cargo llvm-cov nextest --lcov", True),
         ("RUSTFLAGS='-D warnings' cargo test", True),
+        ("env RUN_ACT_VALIDATION=1 make test", True),
+        ("env -u HOME cargo test", True),
+        ("make \\\ntest", True),
+        ("make lint # then\nmake test", True),
+        ("echo 'pre;make test;post'", False),
+        ('echo "a && cargo test"', False),
+        ("# make test", False),
         ("make test-workflow-contracts", False),
         ("make lint", False),
         ("cargo build --all-targets", False),
@@ -151,6 +168,15 @@ def test_only_the_doctest_step_runs_the_suite_outside_coverage() -> None:
     repeated = [run for run in runs if run != (SUITE_JOB, DOCTEST_COMMAND)]
     assert not repeated, f"the suite runs outside coverage in {repeated!r}"
     assert len(doctests) == 1, "the doctests must run once, in build-test"
+
+
+def test_ci_runs_on_every_pull_request() -> None:
+    """Require ``ci.yml``'s pull-request trigger, with no branch or path filter."""
+    triggers = _ci_triggers()
+    assert "pull_request" in triggers, "ci.yml must run on pull requests"
+    trigger = triggers["pull_request"] or {}
+    filters = sorted(set(trigger) - {"types"})
+    assert not filters, f"filters {filters} would skip some pull requests"
 
 
 def test_build_test_runs_the_doctests_on_every_event() -> None:
