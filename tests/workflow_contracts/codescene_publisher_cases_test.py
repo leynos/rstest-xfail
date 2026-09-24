@@ -94,7 +94,9 @@ def test_only_a_push_restricted_to_main_is_the_publisher(
     expected: bool,
 ) -> None:
     """Only a push filtered to the literal ``main`` publishes."""
-    assert rules.publishes_from_main(reading.parse("fixture", source)) is expected
+    assert rules.publishes_from_main(reading.parse("fixture", source)) is expected, (
+        source
+    )
 
 
 PR = "github.event_name == 'workflow_dispatch'"
@@ -323,7 +325,7 @@ def test_quoted_operators_are_not_operators(
 ) -> None:
     """Operators inside quoted literals neither split nor disjoin."""
     parts = rules.conjuncts(condition)
-    assert (None if parts is None else len(parts)) == expected
+    assert (None if parts is None else len(parts)) == expected, parts
 
 
 @pytest.mark.parametrize(
@@ -373,4 +375,5 @@ def test_a_called_baseline_writer_is_counted(prefix: str) -> None:
         "caller.yml": reading.parse("caller", caller),
         "called.yml": reading.parse("called", CALLED_WRITER),
     }
-    assert rules.baseline_writers(every) == ["called.yml", "publisher.yml"]
+    writers = rules.baseline_writers(every)
+    assert writers == ["called.yml", "publisher.yml"], writers

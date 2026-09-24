@@ -47,7 +47,7 @@ PUBLISHER = "coverage-main.yml"
 
 def test_no_workflow_a_pull_request_reaches_touches_codescene() -> None:
     """Every workflow in the pull-request closure keeps clear of CodeScene."""
-    every = reading.workflows()
+    every = reading.workflows(reading.WORKFLOW_DIR)
     closure = reading.pull_request_closure(every)
     missing = KNOWN_PULL_REQUEST_WORKFLOWS - closure
     assert not missing, f"{sorted(missing)} fell out of the closure {sorted(closure)}"
@@ -65,7 +65,7 @@ def test_exactly_one_main_publisher_uploads_ratcheted_coverage() -> None:
 
     Without this, the first clause is satisfied by deleting the upload.
     """
-    every = reading.workflows()
+    every = reading.workflows(reading.WORKFLOW_DIR)
     publishers = sorted(
         name for name, workflow in every.items() if rules.publishes_from_main(workflow)
     )
@@ -80,7 +80,7 @@ def test_exactly_one_main_publisher_uploads_ratcheted_coverage() -> None:
 
 def test_only_the_publisher_writes_the_baseline() -> None:
     """The only ratcheted coverage step a push can reach is the publisher's."""
-    writers = rules.baseline_writers(reading.workflows())
+    writers = rules.baseline_writers(reading.workflows(reading.WORKFLOW_DIR))
     assert writers == [PUBLISHER], f"expected the publisher alone, saw {writers}"
 
 
@@ -98,7 +98,7 @@ def _baselines(workflow: reading.Workflow) -> list[tuple[object, object]]:
 
 def test_every_pull_request_lane_reads_the_publisher_baseline() -> None:
     """Each lane, judged alone, reads the baseline the publisher writes."""
-    every = reading.workflows()
+    every = reading.workflows(reading.WORKFLOW_DIR)
     written = _baselines(every[PUBLISHER])
     assert len(written) == 1, f"expected one publisher coverage step, saw {written}"
     read = [

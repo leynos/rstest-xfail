@@ -67,6 +67,8 @@ def test_the_pull_request_rule_counts_each_breach(source: str, expected: int) ->
         "uses: ./.github/workflows/c.yml\nsecrets: inherit\n",
         "steps:\n  - run: echo ${{ secrets[format('CS_{0}', 'ACCESS_TOKEN')] }}\n",
         "steps:\n  - run: echo '${{ toJSON(secrets) }}'\n",
+        "steps:\n  - run: echo ${{ SECRETS[format('CS_{0}', 'ACCESS_TOKEN')] }}\n",
+        "steps:\n  - run: echo '${{ toJSON(Secrets) }}'\n",
     ],
     ids=[
         "run_body",
@@ -78,6 +80,8 @@ def test_the_pull_request_rule_counts_each_breach(source: str, expected: int) ->
         "inherit",
         "computed_name",
         "whole_context",
+        "computed_name_upper_case",
+        "whole_context_mixed_case",
     ],
 )
 def test_every_route_to_the_token_is_reported(job: str) -> None:
@@ -116,7 +120,8 @@ def test_a_named_secret_and_prose_are_not_computed_references() -> None:
         "on: pull_request\njobs:\n  lane:\n    steps:\n"
         "      - run: echo ${{ secrets.GITHUB_TOKEN }} keeps secrets out of logs\n"
     )
-    assert rules.pull_request_findings(_parse(source)) == []
+    findings = rules.pull_request_findings(_parse(source))
+    assert findings == [], findings
 
 
 def test_a_call_to_a_missing_workflow_is_reported() -> None:
@@ -153,8 +158,10 @@ def test_a_called_workflow_is_inside_the_pull_request_closure(call: str) -> None
         f"on: [pull_request]\njobs:\n  c:\n    uses: {call}\n    secrets: inherit\n"
     )
     every = {"caller.yml": _parse(caller), "called.yml": _parse(CALLEE)}
-    assert "called.yml" in reading.pull_request_closure(every)
-    assert len(rules.pull_request_findings(every["called.yml"])) == 2
+    closure = reading.pull_request_closure(every)
+    assert "called.yml" in closure, closure
+    findings = rules.pull_request_findings(every["called.yml"])
+    assert len(findings) == 2, findings
 
 
 @pytest.mark.parametrize(
@@ -173,7 +180,8 @@ def test_each_call_spelling_is_classified(
     reference: str, expected: tuple[str, str]
 ) -> None:
     """Both local spellings resolve; a local shape with a ref is refused."""
-    assert reading.classify_call(reference) == expected
+    classified = reading.classify_call(reference)
+    assert classified == expected, classified
 
 
 def test_a_refused_call_is_a_finding() -> None:
@@ -237,7 +245,7 @@ def test_an_ambiguous_document_is_refused(source: str, reason: str) -> None:
 )
 def test_workflow_files_are_recognized_in_any_case(name: str, expected: bool) -> None:
     """A case-sensitive comparison would skip a ``.YML`` workflow in silence."""
-    assert reading.is_workflow(name) is expected
+    assert reading.is_workflow(name) is expected, name
 
 
 def _graph_workflows(
@@ -278,8 +286,16 @@ def _reachable(size: int, seeds: tuple[bool, ...], edges: tuple[bool, ...]) -> s
 def test_the_closure_is_exactly_what_a_pull_request_can_reach(size: int) -> None:
     """Every call graph of up to three workflows, cycles and self-calls included.
 
-    The graphs are enumerated exhaustively rather than sampled, and the rule's
-    own query is compared with an independent reachability computation.
+    This is a bounded model check, not a sample. The domain is every directed
+    graph on one to three workflows, self-calls and cycles included (4, 64
+    and 4,096 cases counting every seed set), with every workflow either seeded
+    by ``pull_request`` or declaring only ``workflow_call``, and each call
+    written in one of the three local spellings in rotation. The rule's own
+    query is compared with an independent fixed-point reachability
+    computation over the same graph. Three nodes already hold every shape the
+    worklist can mishandle: a chain longer than one hop, a cycle through a
+    seed, a cycle beside one, and a self-call. Graphs of four or more are out
+    of scope; the query does nothing size-dependent that three nodes miss.
     """
     for seeds in itertools.product((False, True), repeat=size):
         for edges in itertools.product((False, True), repeat=size * size):
@@ -290,3 +306,39 @@ def test_the_closure_is_exactly_what_a_pull_request_can_reach(size: int) -> None
                 seeds,
                 edges,
             )
+
+
+def test_the_reader_reads_a_directory_it_is_given(tmp_path) -> None:
+    """The reader takes its directory as an argument and binds none itself."""
+    (tmp_path / "ci.YML").write_text("on: push\njobs: {}\n", encoding="utf-8")
+    (tmp_path / "notes.txt").write_text("not a workflow", encoding="utf-8")
+    every = reading.workflows(tmp_path)
+    assert list(every) == ["ci.YML"], every
+
+
+@pytest.mark.parametrize(
+    ("layout", "reason"),
+    [
+        ("missing", "cannot list"),
+        ("unreadable", "cannot read"),
+        ("invalid", "not valid YAML"),
+        ("empty", "no workflows found"),
+    ],
+)
+def test_a_directory_the_reader_cannot_judge_is_refused(
+    tmp_path, layout: str, reason: str
+) -> None:
+    """Listing, reading and parsing failures all surface as ``ContractError``.
+
+    A directory in place of a workflow file makes the read fail without
+    depending on file permissions, which a privileged runner ignores.
+    """
+    directory = tmp_path / "workflows"
+    if layout != "missing":
+        directory.mkdir()
+    if layout == "unreadable":
+        (directory / "ci.yml").mkdir()
+    if layout == "invalid":
+        (directory / "ci.yml").write_text("on: [push\n", encoding="utf-8")
+    with pytest.raises(reading.ContractError, match=reason):
+        reading.workflows(directory)
