@@ -28,6 +28,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+from codescene_reading import StrictLoader
 from suite_commands import runs_suite
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -37,6 +38,9 @@ DOCTEST_COMMAND = "cargo test --doc --workspace --all-features"
 DOCTEST_ENV = {"RUSTFLAGS": "-D warnings"}
 COVERAGE_ACTION = "leynos/shared-actions/.github/actions/generate-coverage@"
 SUITE_JOB = ("workflows/ci.yml", "build-test")
+#: The pull-request activity types GitHub runs by default; a declared
+#: ``types`` list replaces that default, so it must keep all three.
+DEFAULT_PULL_REQUEST_TYPES = frozenset({"opened", "synchronize", "reopened"})
 DEPENDENCY_TABLES = ("dependencies", "dev-dependencies", "build-dependencies")
 
 
@@ -44,7 +48,11 @@ def _documents() -> dict[str, dict]:
     """Parse every workflow and local composite action, by relative path."""
     paths = [*GITHUB.glob("workflows/*.y*ml"), *GITHUB.glob("actions/**/action.y*ml")]
     return {
-        str(path.relative_to(GITHUB)): yaml.safe_load(path.read_text(encoding="utf-8"))
+        # StrictLoader refuses a repeated key, which safe_load would resolve to
+        # its last value and so hide part of a step.
+        str(path.relative_to(GITHUB)): yaml.load(  # noqa: S506 - a SafeLoader
+            path.read_text(encoding="utf-8"), Loader=StrictLoader
+        )
         for path in sorted(paths)
     }
 
@@ -145,6 +153,14 @@ def _features(manifest: dict) -> list[str]:
         ("echo 'pre;make test;post'", False),
         ('echo "a && cargo test"', False),
         ("# make test", False),
+        ("if true; then cargo test; fi", True),
+        ("while true; do make test; done", True),
+        ("(cd crate && cargo test)", True),
+        ("timeout 30m make test", True),
+        ("bash -c 'cargo test'", True),
+        ("NAME=foo#bar make test", True),
+        ("make test#notes", False),
+        ("command -v cargo", False),
         ("make test-workflow-contracts", False),
         ("make lint", False),
         ("cargo build --all-targets", False),
@@ -177,6 +193,10 @@ def test_ci_runs_on_every_pull_request() -> None:
     trigger = triggers["pull_request"] or {}
     filters = sorted(set(trigger) - {"types"})
     assert not filters, f"filters {filters} would skip some pull requests"
+    types = set(trigger.get("types") or DEFAULT_PULL_REQUEST_TYPES)
+    assert DEFAULT_PULL_REQUEST_TYPES <= types, (
+        f"pull_request.types {sorted(types)} would skip some pull requests"
+    )
 
 
 def test_build_test_runs_the_doctests_on_every_event() -> None:

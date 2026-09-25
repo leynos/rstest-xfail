@@ -121,7 +121,7 @@ jobs:
           publish-artefact: 'false'
       # The doctests are the only part of `make test` the coverage step does
       # not run. The flags are the ones `make test` gives its doctest line.
-      # tests/workflow_suite_contract.rs holds the split.
+      # tests/workflow_contracts/suite_runs_once_test.py holds the split.
       - name: Run doctests
         env:
           RUSTFLAGS: -D warnings
