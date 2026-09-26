@@ -18,7 +18,24 @@ compact and omits build output such as `target/`.
 │   └── workflows/
 │       ├── act-validation.yml
 │       ├── ci.yml
-
+├── crates/
+│   ├── rstest-xfail/
+│   │   ├── Cargo.toml
+│   │   ├── src/
+│   │   │   └── lib.rs
+│   │   └── tests/
+│   │       ├── public_surface.rs
+│   │       ├── snapshots/
+│   │       ├── stub.rs
+│   │       └── workspace_members.rs
+│   ├── rstest-xfail-core/
+│   │   ├── Cargo.toml
+│   │   └── src/
+│   │       └── lib.rs
+│   └── rstest-xfail-macros/
+│       ├── Cargo.toml
+│       └── src/
+│           └── lib.rs
 ├── docs/
 │   ├── contents.md
 │   ├── developers-guide.md
@@ -28,14 +45,13 @@ compact and omits build output such as `target/`.
 │   ├── users-guide.md
 │   ├── xfail-design.md
 │   └── ...
-├── src/
-│   └── lib.rs
 ├── scripts/
 │   ├── tests/
 │   │   └── test_typos_rollout_check.py
 │   └── typos_rollout_check.py
 ├── tests/
-│   └── stub.rs
+│   └── workflow_contracts/
+│       └── mutation_testing_test.py
 ├── AGENTS.md
 ├── Cargo.toml
 ├── LICENSE
@@ -75,22 +91,29 @@ compact and omits build output such as `target/`.
 - `docs/repository-layout.md`: Documents the repository tree and path
   responsibilities.
 
-- `src/lib.rs`: Contains the library crate root and exported public API
-  surface.
+- `crates/rstest-xfail-core/`: The domain core crate. It owns the outcome and
+  policy vocabulary and the runtime classification functions (roadmap 1.2.x)
+  and must stay a pure leaf with no dependency on the sibling crates or on
+  procedural-macro tooling (constraint D1).
+- `crates/rstest-xfail-macros/`: The procedural-macro crate. It parses
+  `#[xfail(...)]` and rewrites functions (roadmap 2.1.x).
+- `crates/rstest-xfail/`: The facade crate. It re-exports the public surface
+  intended for ordinary users (`rstest_xfail::xfail` at task 1.1.1) and owns
+  the integration tests that document that surface and the workspace member
+  contract.
 
 - `scripts/typos_rollout_check.py`: Enforces exact phrase corrections that the
   token-based Typos scanner cannot represent.
 - `scripts/tests/test_typos_rollout_check.py`: Holds the focused phrase-scanner
   tests.
 
-- `tests/`: Holds integration and behavioural tests that exercise public
-  behaviour.
-- `tests/stub.rs`: Keeps the generated test directory valid until real tests
-  replace it.
+- `tests/`: Holds black-box workflow-contract tests that are not owned by a
+  single crate (currently `workflow_contracts/`).
 - `AGENTS.md`: Provides repository-specific working instructions for agents and
   contributors.
-- `Cargo.toml`: Defines package metadata, dependencies, lint policy, and Cargo
-  configuration.
+- `Cargo.toml`: The virtual workspace manifest. It owns no source code; it
+  declares the `crates/` members, `resolver = "3"`, shared package metadata,
+  shared workspace dependencies, and the inherited lint policy.
 - `LICENSE`: Records the project licence text.
 - `Makefile`: Provides the public build, lint, test, coverage, and
   documentation validation commands.
@@ -107,10 +130,11 @@ compact and omits build output such as `target/`.
 
 ## Ownership boundaries
 
-- Keep generated source code under `src/`. Add modules below `src/` when a
-  feature grows beyond a small entrypoint or crate root.
-- Keep black-box integration tests and externally observable workflow tests
-  under `tests/`.
+- Keep each crate's source under its `crates/*/src/` tree. Add modules below a
+  crate root when a feature grows beyond a small entrypoint or crate root.
+- Keep black-box integration tests that exercise a crate's public surface under
+  that crate's `tests/` directory (for example `crates/rstest-xfail/tests/`).
+  Keep externally observable workflow tests that span crates under `tests/`.
 - Keep reusable documentation under `docs/`. Update `docs/contents.md` whenever
   a documentation file is added, renamed, or removed.
 - Keep build and validation entrypoints in `Makefile`; prefer adding or
@@ -119,6 +143,9 @@ compact and omits build output such as `target/`.
   dependency-update policy under `.github/dependabot.yml`.
 - Do not commit generated build output such as `target/`, coverage artefacts,
   or local editor state.
+- Keep the core crate free of dependency edges to the facade, the macros crate,
+  and procedural-macro tooling (constraint D1, enforced by
+  `crates/rstest-xfail/tests/workspace_members.rs`).
 
 ## Updating this document
 

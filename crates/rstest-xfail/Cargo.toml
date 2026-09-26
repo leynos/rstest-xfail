@@ -1,0 +1,28 @@
+[package]
+name = "rstest-xfail"
+description = "Expected failure macro attributes for rstest, async tests and rstest-bdd"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+# Public re-exports of core types arrive in roadmap 1.2.x; the dependency edge
+# is declared now to establish the intended workspace graph (verified by D1).
+rstest-xfail-core.workspace = true
+rstest-xfail-macros.workspace = true
+
+[dev-dependencies]
+rstest = "0.26.1"
+googletest = "0.13"
+pretty_assertions = "1.4.1"
+insta = "1.48.0"
+serde_json = "1.0.151"
+serial_test = "4.0.1"
+
+[lints]
+workspace = true
