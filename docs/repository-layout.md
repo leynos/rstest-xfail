@@ -29,10 +29,6 @@ compact and omits build output such as `target/`.
 │   └── ...
 ├── src/
 │   └── lib.rs
-├── scripts/
-│   ├── tests/
-│   │   └── test_typos_rollout_check.py
-│   └── typos_rollout_check.py
 ├── tests/
 │   └── stub.rs
 ├── AGENTS.md
@@ -74,11 +70,6 @@ compact and omits build output such as `target/`.
 
 - `src/lib.rs`: Contains the library crate root and exported public API
   surface.
-
-- `scripts/typos_rollout_check.py`: Enforces exact phrase corrections that the
-  token-based Typos scanner cannot represent.
-- `scripts/tests/test_typos_rollout_check.py`: Holds the focused phrase-scanner
-  tests.
 
 - `tests/`: Holds integration and behavioural tests that exercise public
   behaviour.

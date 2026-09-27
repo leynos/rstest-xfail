@@ -12,9 +12,9 @@ accepted = []
 
 [patterns]
 ignore = [
-  # Preserve exact formal product and documentation names across line wrapping.
-  'Azure Architecture\s+Center\s+\|\s+Microsoft Learn',
-  'GitHub\s+Flavored\s+Markdown',
+  # Inline code spans, which this repository's spelling check has always
+  # masked; preserved through the migration to the shared gate.
+  '`[^`\n]+`',
 ]
 
 [files]

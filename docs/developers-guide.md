@@ -64,12 +64,14 @@ scenario bindings, and supported testing patterns.
 
 ### Spelling policy
 
-Run `make spelling` to enforce en-GB-oxendict prose spelling. The tracked
-`typos.toml` starts from the shared estate dictionary and applies the narrow
-repository policy in `typos.local.toml`. Edit the local policy, then run
-`make spelling-config` rather than changing generated entries by hand. The
-focused shared config builder refreshes its untracked local dictionary cache
-only when the authoritative copy is newer.
+Run `make spelling` to enforce en-GB-oxendict prose spelling and the shared
+phrase corrections. It runs the pinned `typos-config-builder gate`, which
+regenerates the tracked `typos.toml` from the shared estate dictionary and the
+narrow repository policy in `typos.local.toml`. Edit the local policy, then run
+`make spelling` and commit the regenerated file rather than changing generated
+entries by hand. The builder refreshes its untracked local dictionary cache
+only when the authoritative copy is newer. Bump the pin by changing
+`TYPOS_CONFIG_BUILDER_VERSION` in the `Makefile`.
 
 ### Security audit ignores
 
