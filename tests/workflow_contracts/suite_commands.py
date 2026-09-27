@@ -49,13 +49,14 @@ SHELLS = frozenset({"sh", "bash"})
 #: The shell's view of a command, one piece at a time: a comment (dropped), a
 #: line continuation (read as a space), a separator between commands, or text,
 #: where quoted strings and escaped characters are kept whole so a separator
-#: inside them does not split the command.
+#: inside them does not split the command. An unterminated quote runs to the
+#: end of the command, as the shell reads it, so nothing after it is split off.
 TOKENS = re.compile(
     r"""
     (?P<comment>(?:^|(?<=[\s;&|]))\#[^\n]*)
     |(?P<continuation>\\\n)
     |(?P<separator>[;&|\n])
-    |(?P<text>'[^']*'|"(?:\\.|[^"\\])*"|\\.|[^'"\\;&|\n\#]+|\#)
+    |(?P<text>'[^']*(?:'|$)|"(?:\\.|[^"\\])*(?:"|$)|\\.|[^'"\\;&|\n\#]+|\#)
     """,
     re.VERBOSE | re.DOTALL | re.MULTILINE,
 )
