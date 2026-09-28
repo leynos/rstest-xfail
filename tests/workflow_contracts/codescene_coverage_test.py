@@ -37,7 +37,6 @@ import codescene_rules as rules
 # floor it must still reach, so a closure that emptied cannot pass.
 KNOWN_PULL_REQUEST_WORKFLOWS = frozenset(
     {
-        "act-validation.yml",
         "ci.yml",
         "dependabot-automerge.yml",
     }
