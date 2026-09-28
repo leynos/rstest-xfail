@@ -34,8 +34,10 @@ from suite_commands import runs_suite
 ROOT = Path(__file__).resolve().parents[2]
 GITHUB = ROOT / ".github"
 DOCTEST_COMMAND = "cargo test --doc --workspace --all-features"
-#: The Makefile's RUST_FLAGS, which `make test` gives its doctest line.
-DOCTEST_ENV = {"RUSTFLAGS": "-D warnings"}
+#: The flags `make test` gives its doctest line on Linux: the Makefile's
+#: RUST_FLAGS and the build standard's STANDARD_RUSTFLAGS, restated because an
+#: assigned RUSTFLAGS replaces `.cargo/config.toml`'s flags.
+DOCTEST_ENV = {"RUSTFLAGS": "-D warnings -Zthreads=8 -Clink-arg=-fuse-ld=mold"}
 COVERAGE_ACTION = "leynos/shared-actions/.github/actions/generate-coverage@"
 SUITE_JOB = ("workflows/ci.yml", "build-test")
 #: The pull-request activity types GitHub runs by default; a declared
