@@ -47,3 +47,14 @@ documentation set.
   scripts.
 - [Whitaker user's guide](whitaker-users-guide.md) explains the df12
   Productions opinionated Rust lint suite and its project integration workflow.
+
+## Decision records
+
+- [ADR-001: Cargo workspace and crate boundaries](adr-001-cargo-workspace-and-crate-boundaries.md)
+  records the decision to adopt a three-crate Cargo workspace under `crates/`
+  with a pure core.
+
+## Execution plans
+
+- [Convert the crate into a Cargo workspace (1.1.1)](execplans/1-1-1-convert-crate-into-a-cargo-workspace.md)
+  is the execution plan for roadmap task 1.1.1.
