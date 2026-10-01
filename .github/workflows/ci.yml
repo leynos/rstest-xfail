@@ -41,7 +41,7 @@ jobs:
         with:
           globs: '**/*.md'
       - name: Setup uv
-        uses: astral-sh/setup-uv@f5548c55522a1db0af3c84f2af3d058bc9bc2de2
+        uses: astral-sh/setup-uv@0e3884b860e20d3f4d5daa2347130beb51ccde47
       - name: Install Markdown diagram tooling
         run: |
           uv tool install nixie-cli==1.1.0
