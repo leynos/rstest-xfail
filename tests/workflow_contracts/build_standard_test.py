@@ -126,3 +126,24 @@ def test_coverage_and_release_take_neither_flag(target: str) -> None:
     for flags in assignments:
         assert THREADS_FLAG not in flags, f"`make {target}` takes {THREADS_FLAG}"
         assert MOLD_FLAG not in flags, f"`make {target}` takes {MOLD_FLAG}"
+
+
+def test_coverage_recipe_selects_llvm() -> None:
+    """Instrumentation needs LLVM, and the dev profile defaults to Cranelift.
+
+    So the ``cargo llvm-cov`` command itself must select LLVM, or coverage would
+    inherit the Cranelift default from ``.cargo/config.toml``.
+    """
+    result = subprocess.run(
+        ["make", "-n", "-B", "BUILD_HOST_OS=Linux", "coverage"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    commands = result.stdout.replace("\\\n", " ").splitlines()
+    coverage = [line for line in commands if "llvm-cov" in line]
+    assert coverage, "`make coverage` runs no cargo llvm-cov command"
+    for line in coverage:
+        assert "CARGO_PROFILE_DEV_CODEGEN_BACKEND=llvm" in line, line
+
