@@ -22,6 +22,12 @@ documentation set.
   spelling, structure, Markdown, Architecture Decision Record (ADR), Request
   for Comments (RFC), and roadmap conventions used by this documentation set.
 
+## Decision records
+
+- [ADR 001: Adopt the shared CV-005 contract library](adr-001-adopt-the-shared-cv005-contract-library.md)
+  records the move from a local copy of the CV-005 contract to the pinned
+  shared check.
+
 ## Rust reference material
 
 - [Reliable testing in Rust via dependency injection](reliable-testing-in-rust-via-dependency-injection.md)

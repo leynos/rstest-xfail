@@ -167,3 +167,10 @@ document, the upload condition is split on `&&` with any `||` refused, and
 workflows are parsed with duplicate keys refused. What stays here is
 `strict_loader.py` and `suite_commands.py`, which the suite-runs-once contract
 reads through.
+
+[`cv005_wiring_test.py`](../tests/workflow_contracts/cv005_wiring_test.py)
+holds the local wiring: the pin is a full commit, the target runs the pinned
+checker with `check --repository .` under Python 3.13, `.github/cv005.toml`
+names this repository, `make all` includes the target, and CI runs it. The
+decision is recorded in
+[ADR 001](adr-001-adopt-the-shared-cv005-contract-library.md).
