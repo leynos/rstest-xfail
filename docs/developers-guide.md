@@ -153,10 +153,17 @@ dispatch that replaces a pending push uploads the same or a newer commit, but
 `generate-coverage` saves the baseline only on a push, so the baseline stays
 one commit behind until the next push (shared-actions #518).
 
-`make test-workflow-contracts` holds the rule through the `codescene_*` modules
-in `tests/workflow_contracts/`. They prove each clause against breaching
-fixtures as well as against the real workflows: the pull-request clauses run
-over every workflow a pull request can reach through local `uses:` calls, the
-host and token clauses read every scalar in each document, the upload condition
-is split on `&&` with any `||` refused, and workflows are parsed with duplicate
-keys refused.
+`make test-workflow-contracts` holds the rule by running
+`cv005-contracts check`, the shared contract library in `leynos/shared-actions`
+(`packages/cv005-contracts`), from a full commit named by `CV005_CONTRACTS_REF`
+in the Makefile, then the pytest contracts in `tests/workflow_contracts/`. A
+fix to the rules is therefore a pin bump. The target needs `uv`, which fetches
+the Python 3.13 the library runs under. The repository's one parameter is its
+`repository` name in `.github/cv005.toml`. The library proves each clause
+against breaching fixtures as well as against the real workflows: the
+pull-request clauses run over every workflow a pull request can reach through
+local `uses:` calls, the host and token clauses read every scalar in each
+document, the upload condition is split on `&&` with any `||` refused, and
+workflows are parsed with duplicate keys refused. What stays here is
+`strict_loader.py` and `suite_commands.py`, which the suite-runs-once contract
+reads through.

@@ -7,7 +7,7 @@ name: Coverage (main)
 # pull request head is not, and its check mode fails on every project whose
 # coverage gates are off. Caches written on main are readable by every
 # pull-request run, so the baseline written here is the one those ratchet
-# checks compare against. tests/workflow_contracts/codescene_coverage_test.py
+# checks compare against. `make test-workflow-contracts`
 # holds this shape.
 #
 # Known exception: a Dependabot pull request merged by the automerge workflow
@@ -68,7 +68,7 @@ jobs:
           RUSTFLAGS: ""
         run: cargo binstall --no-confirm --locked cargo-nextest
       - name: Test and Measure Coverage
-        uses: leynos/shared-actions/.github/actions/generate-coverage@759da19f0379b6d2d7ddef93b7ad4c3b98154e41
+        uses: leynos/shared-actions/.github/actions/generate-coverage@7d751eded578e48dacf43ab173d5820e6437c474
         env:
           CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: clang
           RUSTFLAGS: -C link-arg=-fuse-ld=lld

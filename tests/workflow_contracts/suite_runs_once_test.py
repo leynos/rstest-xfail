@@ -28,7 +28,7 @@ from pathlib import Path
 
 import pytest
 import yaml
-from codescene_reading import StrictLoader
+from strict_loader import StrictLoader
 from suite_commands import runs_suite
 
 ROOT = Path(__file__).resolve().parents[2]
