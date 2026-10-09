@@ -53,7 +53,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@abf0dcf2686de1eaf79b6dc9a16662b631bed149
+        uses: leynos/shared-actions/.github/actions/setup-rust@5bc2b2611f5921ef2c56e4ee3fde2b879a319361
       - name: Install mold linker
         if: runner.os == 'Linux'
         run: |
@@ -68,7 +68,7 @@ jobs:
           RUSTFLAGS: ""
         run: cargo binstall --no-confirm --locked cargo-nextest
       - name: Test and Measure Coverage
-        uses: leynos/shared-actions/.github/actions/generate-coverage@7d751eded578e48dacf43ab173d5820e6437c474
+        uses: leynos/shared-actions/.github/actions/generate-coverage@5bc2b2611f5921ef2c56e4ee3fde2b879a319361
         env:
           CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: clang
           RUSTFLAGS: -C link-arg=-fuse-ld=lld
@@ -87,7 +87,7 @@ jobs:
         run: echo "available=${{ secrets.CS_ACCESS_TOKEN != '' }}" >> "$GITHUB_OUTPUT"
       - name: Upload coverage data to CodeScene
         if: ${{ steps.codescene-token.outputs.available == 'true' && github.ref == 'refs/heads/main' }}
-        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@7d751eded578e48dacf43ab173d5820e6437c474
+        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@5bc2b2611f5921ef2c56e4ee3fde2b879a319361
         with:
           path: lcov.info
           format: lcov
