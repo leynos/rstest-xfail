@@ -29,10 +29,10 @@ USES_RE = re.compile(
     r"^leynos/shared-actions/\.github/workflows/mutation-cargo\.yml@[0-9a-f]{40}$"
 )
 
-EXPECTED_SETUP_COMMANDS = (
-    "sudo apt-get update\n"
-    "sudo apt-get install --yes --no-install-recommends clang lld mold\n"
-)
+EXPECTED_LINKER_INPUTS: dict[str, str] = {
+    "install-mold": "true",
+    "install-clang-lld": "true",
+}
 
 
 def _load() -> dict[str, object]:
@@ -121,10 +121,10 @@ def test_with_block_carries_the_caller_configuration() -> None:
     with_block = _mutation_job(_load()).get("with")
     assert with_block == {
         "extra-args": "--all-features",
-        "setup-commands": EXPECTED_SETUP_COMMANDS,
+        **EXPECTED_LINKER_INPUTS,
     }, (
         "jobs.mutation.with must set exactly extra-args '--all-features' "
-        "(the CI test baseline uses --all-features) and setup-commands "
-        "installing clang, lld, and mold (.cargo/config.toml links with "
-        f"clang + mold), got {with_block!r}"
+        "(the CI test baseline uses --all-features) and the install-mold and "
+        "install-clang-lld inputs (.cargo/config.toml links with clang + "
+        f"mold), got {with_block!r}"
     )

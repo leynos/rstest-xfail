@@ -49,6 +49,15 @@ behaviour.
 Install `clang`, `lld`, `mold`, `python3`, and `cargo-audit` before running the
 full generated workflow locally on Linux.
 
+CI does not install the linkers with its own `apt-get` step. The `Setup Rust`
+step in `.github/workflows/ci.yml` and `coverage-main.yml` passes
+`install-mold: 'true'` and `install-clang-lld: 'true'` to the pinned
+`leynos/shared-actions` `setup-rust` action, and `mutation-testing.yml` passes
+the same two inputs to `mutation-cargo.yml`. Each installs `mold`, `clang`, and
+`lld` on Linux and fails the job unless the tools resolve on `PATH`. The
+actions set no linker flag, so `.cargo/config.toml` and the coverage step's
+environment still choose which linker runs.
+
 Whitaker is the df12 Productions opinionated lint suite used by `make lint`.
 See the [Whitaker user's guide](whitaker-users-guide.md) for installation,
 configuration, and local invocation details.
