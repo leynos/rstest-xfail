@@ -29,7 +29,10 @@ USES_RE = re.compile(
     r"^leynos/shared-actions/\.github/workflows/mutation-cargo\.yml@[0-9a-f]{40}$"
 )
 
-EXPECTED_LINKER_INPUTS = {"install-mold": "true", "install-clang-lld": "true"}
+EXPECTED_LINKER_INPUTS: dict[str, str] = {
+    "install-mold": "true",
+    "install-clang-lld": "true",
+}
 
 
 def _load() -> dict[str, object]:
