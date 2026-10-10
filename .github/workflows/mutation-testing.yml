@@ -18,12 +18,11 @@ jobs:
     permissions:
       contents: read
       id-token: write # OIDC workflow-source resolution
-    uses: leynos/shared-actions/.github/workflows/mutation-cargo.yml@5bc2b2611f5921ef2c56e4ee3fde2b879a319361
+    uses: leynos/shared-actions/.github/workflows/mutation-cargo.yml@b804b69fa7f978cf9091b9d9bd5481d8ce58c2ea
     with:
       # Mirror the CI test baseline, which runs with --all-features.
       extra-args: "--all-features"
       # .cargo/config.toml links with clang + mold; install the same
-      # packages the CI build-test job installs before running tests.
-      setup-commands: |
-        sudo apt-get update
-        sudo apt-get install --yes --no-install-recommends clang lld mold
+      # linkers the CI build-test job installs through setup-rust.
+      install-mold: 'true'
+      install-clang-lld: 'true'
