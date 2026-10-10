@@ -50,6 +50,11 @@ def _setup_rust_steps(workflow: str) -> list[dict[str, typ.Any]]:
     ]
 
 
+def _joined(script: str) -> str:
+    """Join backslash continuations so a split command reads as one line."""
+    return re.sub(r"\\\n\s*", " ", script)
+
+
 @pytest.mark.parametrize("workflow", PROVISIONING_WORKFLOWS)
 def test_setup_rust_installs_the_linkers(workflow: str) -> None:
     """Every ``setup-rust`` step installs mold, clang and lld, pinned by SHA."""
@@ -71,7 +76,22 @@ def test_no_step_installs_the_linkers_by_hand(workflow: str) -> None:
     offenders = [
         str(step.get("name", step))
         for step in _steps(workflow)
-        if HAND_INSTALL.search(str(step.get("run", "")))
+        if HAND_INSTALL.search(_joined(str(step.get("run", ""))))
     ]
 
     assert not offenders, f"{workflow} installs linkers by hand in {offenders!r}"
+
+
+@pytest.mark.parametrize(
+    ("script", "caught"),
+    [
+        pytest.param("sudo apt-get install --yes clang lld mold", True, id="one-line"),
+        pytest.param(
+            "sudo apt-get install --yes \\\n  clang lld mold", True, id="continued"
+        ),
+        pytest.param("sudo apt-get install --yes jq", False, id="other-package"),
+    ],
+)
+def test_the_hand_install_reader_sees_split_commands(script: str, caught: bool) -> None:
+    """A package list on a continuation line is still a hand-rolled install."""
+    assert bool(HAND_INSTALL.search(_joined(script))) is caught
