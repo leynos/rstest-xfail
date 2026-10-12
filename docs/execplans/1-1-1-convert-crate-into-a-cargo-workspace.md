@@ -873,7 +873,7 @@ from `docs/contents.md` under a new `## Decision records` group.
   public API changes at 1.1.1, but the guide did name `src/lib.rs` as the
   library layout, and this conversion deletes that root path and moves the
   crate roots under `crates/*/src/`. Anyone following the guide to locate or
-  edit the library would be misdirected, so the layout sentence is corrected
+  edit the library would be misdirected, so the layout sentence is corrected,
   and the three members are named as placeholder stubs. A fuller user-guide
   treatment still waits on real public API at 2.1.x.
 
