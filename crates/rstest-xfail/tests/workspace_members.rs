@@ -34,14 +34,27 @@ type DependencyEdge = (&'static str, &'static str);
 /// (roadmap 1.2.x), and this table is where it gets declared.
 const INTENDED_EDGES: [DependencyEdge; 1] = [(FACADE, "rstest-xfail-macros")];
 
-/// Runs `cargo metadata` and returns the parsed JSON document.
+/// Parses a `cargo metadata` JSON document.
+///
+/// Split from the spawn below so the parse-failure branch can be exercised
+/// without running a process.
+fn parse_metadata(stdout: &[u8]) -> eyre::Result<serde_json::Value> {
+    serde_json::from_slice(stdout).wrap_err("failed to parse the `cargo metadata` JSON document")
+}
+
+/// Runs `cargo metadata` through `program` and returns the parsed document.
 ///
 /// Returns `Result` so the helper stays outside the `expect`-in-tests
 /// allowance; helpers must propagate errors rather than panic. `--offline` and
 /// `CARGO_NET_OFFLINE` avoid any registry refresh and reduce lock contention.
-fn workspace_metadata() -> eyre::Result<serde_json::Value> {
-    let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned());
-    let output = Command::new(cargo)
+///
+/// The program is a parameter rather than a lookup inside this function, so the
+/// command-failure branch is reachable from a test that names a program certain
+/// to fail. Both failure branches name the stage that failed — spawning,
+/// exiting non-zero, or parsing — instead of surfacing a bare `serde_json` or
+/// I/O error.
+fn metadata_from(program: &str) -> eyre::Result<serde_json::Value> {
+    let output = Command::new(program)
         .args([
             "metadata",
             "--no-deps",
@@ -51,16 +64,23 @@ fn workspace_metadata() -> eyre::Result<serde_json::Value> {
         ])
         .env("CARGO_NET_OFFLINE", "1")
         .output()
-        .wrap_err("failed to run `cargo metadata --no-deps --offline --format-version 1`")?;
+        .wrap_err_with(|| {
+            format!("failed to run `{program} metadata --no-deps --offline --format-version 1`")
+        })?;
     if !output.status.success() {
         return Err(eyre!(
-            "`cargo metadata` exited with {}: {}",
+            "`{program} metadata` exited with {}: {}",
             output.status,
             String::from_utf8_lossy(&output.stderr)
         ));
     }
-    serde_json::from_slice(&output.stdout)
-        .wrap_err("failed to parse the `cargo metadata` JSON document")
+    parse_metadata(&output.stdout)
+}
+
+/// Runs `cargo metadata` through the `CARGO` program for the current build.
+fn workspace_metadata() -> eyre::Result<serde_json::Value> {
+    let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned());
+    metadata_from(&cargo)
 }
 
 /// Extracts the set of member package names from a `cargo metadata` document.
@@ -195,4 +215,40 @@ fn each_intended_member_is_present(#[case] expected: &str) -> eyre::Result<()> {
     let names = member_names(&metadata)?;
     assert_that!(&names, contains(eq(expected)));
     Ok(())
+}
+
+/// A program name that cannot exist, so the spawn itself is what fails.
+const NO_SUCH_PROGRAM: &str = "rstest-xfail-no-such-program";
+
+/// Pins the spawn-failure branch of [`metadata_from`].
+///
+/// The reported error must name the stage — running the command — rather than
+/// surfacing a bare `std::io::Error`. No `file_serial`: the spawn fails before
+/// any Cargo process starts, so there is no package-cache lock to contend for.
+#[test]
+fn metadata_command_failure_names_the_command() {
+    let message = metadata_from(NO_SUCH_PROGRAM)
+        .expect_err("a program that cannot exist must make the metadata command fail")
+        .to_string();
+    assert!(
+        message.contains("failed to run"),
+        "the error must name the failing stage, got: {message}"
+    );
+}
+
+/// Pins the parse-failure branch of [`metadata_from`].
+///
+/// A document that is not JSON must be reported as a parse failure naming that
+/// stage, not as a bare `serde_json::Error`. This is pure — no process is
+/// spawned — so it needs no `file_serial` either.
+#[test]
+fn metadata_parse_failure_names_the_stage() {
+    let not_json: &[u8] = b"not json";
+    let message = parse_metadata(not_json)
+        .expect_err("a non-JSON document must fail to parse")
+        .to_string();
+    assert!(
+        message.contains("failed to parse"),
+        "the error must name the failing stage, got: {message}"
+    );
 }
