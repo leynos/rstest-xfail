@@ -181,6 +181,12 @@ below as they emerge.
 - [x] (2026-08-15 05:45Z) Draft pull request #12 opened/updated with title
   `Convert the crate into a Cargo workspace (1.1.1)`, linking this execplan and
   roadmap §1.1.1; branch pushed (5 implementation commits).
+- [x] (2026-10-12) Pull request #12 closed as superseded: its head predated the
+  rebase onto `main`, so the branch could not be fast-forwarded.
+- [x] (2026-10-12) Draft pull request #112 opened from
+  `1-1-1-cargo-workspace-conversion` with the same title, entrypoints, and
+  acceptance criteria, carrying the rebased history and the review revisions
+  below. All six commit gates pass at its head commit.
 
 Replace `(pending)` with a UTC timestamp as each row completes, for example
 `- [x] (2026-06-24 14:00Z) Stage B complete.` Split any partially completed row
@@ -979,16 +985,21 @@ acceptance criteria.
 
 The plan was approved and fully implemented: Stages C and D are complete and
 task 1.1.1 is delivered, as recorded in the outcomes and retrospective above.
-The pull request carrying it was **draft** while this was a pre-implementation
+The pull request carrying it is **draft** while this was a pre-implementation
 plan; draft status tracks the pull request lifecycle, not implementation
 completeness, and is independent of the "No implementation has begun" statement
-that applied only to the original draft of this plan.
+that applied only to the original draft of this plan. Pull request #112 is the
+current carrier; pull request #12 was closed as superseded once the branch was
+rebased and could no longer be fast-forwarded.
 
 ### Post-review revisions
 
 After review feedback on pull request #12 the branch was rebased onto `main`
 (bringing in the shared build standard, the CV-005 workflow contracts, and the
-`nightly-2026-10-11` toolchain bump) and the following changes were applied:
+`nightly-2026-10-11` toolchain bump) and the following changes were applied.
+Pull request #12 was then closed as superseded, because its head commit
+predated the rebase and could not be fast-forwarded; the rebased history and
+these revisions are carried by pull request #112.
 
 - `workspace_members.rs` now asserts an **empty** direct dependency set for
   `rstest-xfail-core` instead of testing a forbidding-name blacklist, so the D1
