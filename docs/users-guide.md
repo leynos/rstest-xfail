@@ -6,9 +6,18 @@ rendering it from the template.
 ## Generated Tooling
 
 Generated projects use Rust 2024, a pinned nightly toolchain, strict lint
-settings, and documented starter code. Library projects render `src/lib.rs`.
-Application projects render `src/main.rs`, `src/lib.rs`, release automation, and
-`[package.metadata.binstall]` metadata for binary installation.
+settings, and documented starter code. Library projects render a library crate
+root. Application projects render `src/main.rs`, a library crate root, release
+automation, and `[package.metadata.binstall]` metadata for binary installation.
+
+A rendered project is a Cargo workspace. This repository renders the library
+form, so the code lives under `crates/`, not at a root `src/`: the facade crate
+`crates/rstest-xfail/` re-exports the public surface,
+`crates/rstest-xfail-core/` holds the domain vocabulary, and
+`crates/rstest-xfail-macros/` holds the procedural macros. Those three crate
+roots are placeholder stubs until the vocabulary (roadmap 1.2.x) and the macro
+(roadmap 2.1.x) land. To work on a single crate, pass `-p <crate>` to `cargo`.
+See [repository layout](repository-layout.md) for the full tree.
 
 Development builds use Cranelift for debug code generation. On Linux targets,
 `.cargo/config.toml` configures clang to link with `mold` so local debug builds

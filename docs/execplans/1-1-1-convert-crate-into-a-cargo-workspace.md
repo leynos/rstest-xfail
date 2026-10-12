@@ -868,11 +868,14 @@ from `docs/contents.md` under a new `## Decision records` group.
 - `docs/xfail-design.md` — add one informative sentence at the top of §5
   noting the skeleton is realized by this plan and crate roots are placeholders
   until 1.2.x/2.1.x; do not alter the normative crate table.
-- `docs/users-guide.md` — no change. It documents `make` targets in
-  template-neutral language and names no crate or dependency snippet, and the
-  facade crate name is unchanged from the current package name, so there is no
-  user-visible API change at 1.1.1. Defer any user-guide note to the first task
-  that ships real public API (2.1.x).
+- `docs/users-guide.md` — add a short "rendered projects are a workspace" note.
+  The `make` targets are already described in template-neutral language and no
+  public API changes at 1.1.1, but the guide did name `src/lib.rs` as the
+  library layout, and this conversion deletes that root path and moves the
+  crate roots under `crates/*/src/`. Anyone following the guide to locate or
+  edit the library would be misdirected, so the layout sentence is corrected
+  and the three members are named as placeholder stubs. A fuller user-guide
+  treatment still waits on real public API at 2.1.x.
 
 No Mermaid diagram is added to the edited documentation beyond Figure 1 in this
 plan, so `make nixie` validates the existing diagram and passes. The optional
@@ -1097,3 +1100,11 @@ these revisions are carried by pull request #112.
   the rule back to a timestamp comparison. The two documentation gates this
   repair itself tripped (`mdtablefix` reflow, `MD040` on the new fence) were
   fixed before commit.
+- The Codex connector raised a further P2 finding that CodeRabbit did not: this
+  plan deferred the user guide on the grounds that it "names no crate or
+  dependency snippet", but `docs/users-guide.md` did name `src/lib.rs` as the
+  library layout, and this conversion deletes that root path. The guide now
+  states that a rendered project is a Cargo workspace and names the three
+  member crates and their placeholder status, and the deferral note above
+  records the corrected reasoning. The finding was valid; the plan's stated
+  reason for skipping the file was not.
