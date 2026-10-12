@@ -1017,9 +1017,17 @@ these revisions are carried by pull request #112.
 - `rstest_xfail::xfail` carries a Rustdoc comment at the facade boundary.
 - The ADR gained a `Requirements` section with functional and technical
   subsections and a table caption, and all ADR headings use sentence case.
-- The `Makefile` build rules are declared phony so Make always delegates the
-  freshness decision to Cargo; previously an existing artefact suppressed every
-  later rebuild.
+- The `Makefile` artefact rule gained a `FORCE` prerequisite so Make always
+  delegates the freshness decision to Cargo; previously an existing artefact
+  suppressed every later rebuild.
+- That fix was first written by declaring the artefact targets `.PHONY`, which
+  suppressed Make's implicit-rule search: mark a target phony and Make skips
+  implicit rules for it, so the `target/%/$(TARGET)` pattern rule stopped
+  matching and `make build` and `make release` became silent no-ops. The
+  repository's `build_standard_test.py` contract test caught it in CI by
+  asserting that `make release` still assigns `RUSTFLAGS`, and the rule now
+  uses a `FORCE` prerequisite, which forces the rebuild without making the
+  artefact phony.
 - `homepage` was removed from `[workspace.package]` and every member manifest.
   Cargo warns that `package.homepage` is redundant with `package.repository`
   when both are set, and `repository` already carries the canonical project URL.

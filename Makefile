@@ -70,13 +70,19 @@ test: ## Run tests with warnings treated as errors
 	RUSTFLAGS="$(RUST_FLAGS) $(STANDARD_RUSTFLAGS)" $(CARGO) $(TEST_CMD) $(TEST_FLAGS) $(BUILD_JOBS)
 	RUSTFLAGS="$(RUST_FLAGS) $(STANDARD_RUSTFLAGS)" $(CARGO) test --doc --workspace --all-features
 
-# Cargo owns the freshness decision for the artefact, so this rule always
-# delegates to `cargo build` rather than letting Make compare timestamps. Make
-# would otherwise treat an existing artefact as up to date forever, because the
-# rule declares no source or manifest prerequisites, and skip the rebuild.
-.PHONY: target/debug/$(TARGET) target/release/$(TARGET)
+# Cargo owns the freshness decision for the artefact, so `FORCE` makes the
+# rule always delegate to `cargo build` rather than letting Make compare
+# timestamps. Make would otherwise treat an existing artefact as up to date
+# forever, because the rule declares no source or manifest prerequisites, and
+# skip the rebuild.
+#
+# The prerequisite is a `FORCE` target rather than declaring the artefact
+# `.PHONY`. Marking it phony would suppress Make's implicit-rule search, and
+# this rule would then never match at all, because Make skips implicit rules
+# for phony targets. `build` and `release` would report "Nothing to be done".
+FORCE:
 
-target/%/$(TARGET): ## Build binary in debug or release mode
+target/%/$(TARGET): FORCE ## Build binary in debug or release mode
 	$(if $(findstring release,$(@)),$(RELEASE_RUSTFLAGS) )$(CARGO) build $(BUILD_JOBS) $(if $(findstring release,$(@)),--release)
 
 coverage: ## Generate lcov coverage with lld for llvm-tools compatibility
