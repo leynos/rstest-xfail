@@ -88,7 +88,8 @@ Hard invariants. Violation requires escalation, not a workaround.
 - **C-DEPS-1 — no new runtime dependencies.** This task adds only *path*
   dependencies between the three members. No new crates.io *runtime* dependency
   enters any manifest. Test-only `dev-dependencies` (such as `rstest`, `insta`,
-  `serde_json`, and `serial_test`) are expected and permitted. Any new
+  `serde_json`, `serial_test`, and the `cap-std`/`camino` pair the surface test
+  reads the facade source through) are expected and permitted. Any new
   dependency uses a caret requirement (AGENTS.md "Dependency management").
 - **C-LINTS-1 — lint policy preserved.** The current lint tables move into
   `[workspace.lints]` with zero net change to the enforced lint set, and every
@@ -142,7 +143,7 @@ Stop-and-escalate triggers specific to this task:
 | Risk                                                                                                                                                                                                                                                                                                                                     | Severity | Likelihood | Mitigation                                                                                                                                                                                                                                                                                                            |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | R1. The Cranelift codegen backend cannot build the procedural-macro crate. `.cargo/config.toml` sets `[profile.dev] codegen-backend = "cranelift"` workspace-wide; procedural macros are host-compiled and Cranelift's procedural-macro coverage has historically lagged the LLVM backend. CI also installs Whitaker with `--cranelift`. | High     | Medium     | Validate a bare `proc-macro = true` crate under the pinned nightly first (Concrete steps, Stage B). On failure, scope the LLVM backend to only `rstest-xfail-macros` via `[profile.dev.package.rstest-xfail-macros] codegen-backend = "llvm"` in `.cargo/config.toml`. Escalate per T-STOP-1 if neither works.        |
-| R2. `public-api` / `cargo-public-api` rustdoc-JSON incompatibility with the pinned nightly, if adopted for the surface test. The tool consumes nightly rustdoc JSON whose format is unstable and version-locked, and `nightly-2026-05-28` may not match a published tool version.                                                        | Medium   | Medium     | This plan does **not** adopt `cargo-public-api` for 1.1.1 (see Decision log). The surface is documented with a lightweight reachability test plus an `insta` snapshot. A rigorous surface and SemVer lock is deferred to the publishing-boundary roadmap item.                                                        |
+| R2. `public-api` / `cargo-public-api` rustdoc-JSON incompatibility with the pinned nightly, if adopted for the surface test. The tool consumes nightly rustdoc JSON whose format is unstable and version-locked, and `nightly-2026-05-28` may not match a published tool version.                                                        | Medium   | Medium     | This plan does **not** adopt `cargo-public-api` for 1.1.1 (see Decision log). The surface is documented with a source-derived surface assertion, a lightweight reachability test, and an `insta` snapshot. A rigorous compiled-API surface and SemVer lock is deferred to the publishing-boundary roadmap item.       |
 | R3. The lint-table migration to `[workspace.lints]` silently drops or mistypes a lint. The root manifest carries roughly fifty hand-maintained Clippy lines plus `[lints.rust]` and `[lints.rustdoc]`.                                                                                                                                   | Medium   | Medium     | Move the tables verbatim. Diff the pre- and post-migration `cargo clippy --workspace` inventory. Confirm each member manifest carries `[lints] workspace = true`; an omission means that crate silently runs with default lints. Escalate per T-STOP-2.                                                               |
 | R4. The Makefile `TARGET` and `build`/`release` rules reference a moved or renamed artefact. `TARGET ?= librstest-xfail.rlib` assumes a single root library, and a hyphenated crate actually produces `librstest_xfail.rlib`.                                                                                                            | Medium   | High       | Repoint `TARGET` to `librstest_xfail.rlib` (the facade's artefact) and verify `make build`/`make release` produce it. The `test`, `coverage`, and `audit` targets already pass `--workspace` or derive the root from `cargo metadata` and need no change.                                                             |
 | R5. The CI workflow assumes a single crate. `.github/workflows/ci.yml` drives everything through `make` (check-fmt, lint, audit, test, coverage).                                                                                                                                                                                        | Medium   | Low        | The Makefile targets already use `--workspace`/`--all-targets`, so CI inherits the R3/R4 fixes. Run the gate locally and confirm no workflow edit is needed; flag if the coverage action needs a workspace flag.                                                                                                      |
@@ -208,16 +209,30 @@ first `make build` rather than assuming it.
   `Result` fails. Resolved `dev-dependency` versions: `rstest 0.26.1`,
   `googletest 0.13.0` (pinned back from the default latest to match the plan's
   stated manifest), `pretty_assertions 1.4.1`, `insta 1.48.0`,
-  `serde_json 1.0.151`, `serial_test 4.0.1`, `eyre 0.6.14`. Tests now use
-  `assert_that!` (panic-style) in `Result`-returning tests and pass
-  `&BTreeSet<String>` to `contains`; the exact-set test keeps
-  `pretty_assertions`. The assertions' meaning is unchanged; this is a form
-  deviation recorded here.
+  `serde_json 1.0.151`, `serial_test 4.0.1`, `eyre 0.6.14`, plus the
+  `cap-std 4.0.3` and `camino 1.2.6` pair the surface test reads the facade
+  source through. Tests now use `assert_that!` (panic-style) in
+  `Result`-returning tests and pass `&BTreeSet<String>` to `contains`; the
+  exact-set test keeps `pretty_assertions`. The assertions' meaning is
+  unchanged; this is a form deviation recorded here.
 - **Cranelift procedural-macro spike confirms risk R1 is retired for this
   task.** A bare `proc-macro = true` crate plus a `#[proc_macro_attribute]`
   no-op built, and an integration test that expands and runs the attribute,
   passed under `nightly-2026-05-28` with the dev Cranelift profile. No LLVM
   fallback override was needed and none is added.
+- **The whitaker dylint step is a fourth `make lint` recipe line, and a
+  `lint` failure on an earlier line hides it.** The first full-gate run reported
+  `lint` as one failed row, which read as "clippy failed". Clippy had in fact
+  failed and aborted the target, so the `whitaker --all` dylint pass never ran
+  at all; its status was unobserved, not failing. Once clippy was fixed,
+  whitaker found three diagnostics that clippy cannot see, because it runs a
+  different toolchain and a different lint set: two `no_std_fs_operations`
+  errors (a `std::fs` import and a `fs::read_to_string`), and one
+  `conditional_max_n_branches`. Record per-recipe-line outcomes for
+  `make lint`, not one verdict for the target. The `no_std_fs_operations`
+  denial is also why the facade surface test reads its own source through
+  `cap_std::fs::Dir` and `camino::Utf8Path` rather than `std::fs`, which
+  required adding that pair as `dev-dependencies`.
 
 ## Decision log
 
@@ -254,11 +269,15 @@ first `make build` rather than assuming it.
   `cargo-public-api` consumes nightly rustdoc JSON whose format is
   version-locked, and the repository pins a specific nightly; coupling a
   published tool version to that nightly is brittle for a surface of one
-  placeholder attribute. The snapshot is a hand-maintained record of *intent*
-  for reviewers, not an automated completeness guarantee — it cannot detect an
-  unintended re-export that is also added to the constant. A rigorous surface
-  and SemVer lock belongs at the publishing boundary in a later roadmap item.
-  Date/Author: 2026-06-24, planning team and review panel.
+  placeholder attribute. **Revised during implementation:** the snapshot alone
+  records intent but cannot detect an unintended export, so the shipped test
+  additionally *derives* the exported names from the facade's own `src/lib.rs`
+  and asserts them against `INTENDED_PUBLIC_SURFACE` before snapshotting. The
+  remaining limitation is narrower and stated in the test: the derivation reads
+  source, not compiled metadata. A rigorous compiled-API surface and SemVer
+  lock belongs at the publishing boundary in a later roadmap item. Date/Author:
+  2026-06-24, planning team and review panel; revision 2026-10-12,
+  implementation.
 - Decision: Add a minimal **ADR
   `adr-002-cargo-workspace-and-crate-boundaries`** now. Rationale: the crate
   boundary is substantive and hard to reverse, and it is cited by every later
@@ -557,6 +576,8 @@ insta = "1"
 serde_json = "1"
 serial_test = { version = "3", features = ["file_locks"] }
 eyre = "0.6"
+cap-std = "4"
+camino = "1"
 
 [lints]
 workspace = true
@@ -568,6 +589,7 @@ with
 ```bash
 cargo add --dev rstest googletest pretty_assertions insta serde_json eyre \
   serial_test --features serial_test/file_locks
+cargo add --dev cap-std camino
 ```
 
 then record the resolved versions in `Surprises & discoveries`. The string form
@@ -762,30 +784,35 @@ graph, which is what both the member-set and D1 checks need.
 
 ### The facade public-surface test
 
-`crates/rstest-xfail/tests/public_surface.rs` (final form, added in Stage D):
+`crates/rstest-xfail/tests/public_surface.rs` (final form, added in Stage D and
+then strengthened — see the `Surprises & discoveries` entry on the derived
+surface). The shipped test **derives** the surface from the facade's own
+`src/lib.rs` and asserts the derived set against `INTENDED_PUBLIC_SURFACE`
+before snapshotting the derived value, so an unintended export fails instead of
+being mirrored into the expectation. The Stage D sketch below hard-coded the
+snapshot input and could not detect one; it is retained here only to show the
+shape the test grew from.
 
 ```rust
 //! Documents the facade's public surface for roadmap task 1.1.1.
 //!
-//! It asserts reachability — the intended public item resolves through the
-//! `rstest_xfail` facade path — and records the intended surface as a
-//! reviewer-facing `insta` snapshot. The snapshot is a hand-maintained record
-//! of intent, not an automated completeness guarantee: it cannot detect an
-//! unintended re-export that is also added to the constant. A rigorous surface
-//! and SemVer lock is deferred to the publishing-boundary roadmap item. There
-//! is no classifier behaviour at this stage (roadmap 1.2.x); this test
-//! validates structure only.
+//! The surface is *derived* from the facade's own source rather than restated,
+//! so an unintended re-export fails here instead of being mirrored into the
+//! expectation. Two assertions carry the contract: the derived set must equal
+//! the intended set, and — as a reviewer-facing record — an `insta` snapshot
+//! captures the derived names.
 
 use rstest_xfail::xfail;
 
-/// The facade's intended public surface, one path per line, sorted. Update this
-/// list and review the snapshot only when the public contract intentionally
-/// changes.
+/// The facade's intended public surface, one path per line, sorted.
 const INTENDED_PUBLIC_SURFACE: &str = "rstest_xfail::xfail";
 
 #[test]
-fn facade_public_surface_is_documented() {
-    insta::assert_snapshot!("facade_public_surface", INTENDED_PUBLIC_SURFACE);
+fn facade_public_surface_is_documented() -> eyre::Result<()> {
+    let derived = exported_paths(&facade_source()?)?.join("\n");
+    pretty_assertions::assert_eq!(derived, INTENDED_PUBLIC_SURFACE);
+    insta::assert_snapshot!("facade_public_surface", derived);
+    Ok(())
 }
 
 // Applying the placeholder attribute proves it is reachable through the facade
@@ -793,7 +820,7 @@ fn facade_public_surface_is_documented() {
 // absorbing it. The design forbids a rewritten body from ever masking its real
 // outcome; 2.1.x replaces this no-op before any classification logic exists.
 #[xfail]
-fn annotated_body_runs() -> i32 { 2 + 2 }
+const fn annotated_body_runs() -> i32 { 2 + 2 }
 
 #[test]
 fn placeholder_macro_passes_body_through() {
@@ -802,6 +829,11 @@ fn placeholder_macro_passes_body_through() {
     assert_eq!(annotated_body_runs(), 4);
 }
 ```
+
+`facade_source()` reads the crate source through `cap_std::fs::Dir` and
+`camino::Utf8Path` rather than `std::fs`, which is what the whitaker
+`no_std_fs_operations` lint requires (see `Surprises & discoveries`); the full
+source of the derivation helpers lives in the file itself.
 
 Generate the snapshot once with
 `INSTA_UPDATE=always cargo test -p rstest-xfail --test public_surface` (or
@@ -940,8 +972,9 @@ Expected output:
 
 Task 1.1.1 is done when this prints the three names; `make check-fmt`,
 `make lint`, `make test`, `make markdownlint`, `make nixie`, and `make audit`
-each exit 0; the `public_surface` snapshot reads only `rstest_xfail::xfail`;
-and the D1 purity test passes.
+each exit 0; the `public_surface` test derives only `rstest_xfail::xfail` from
+the facade source and its snapshot reads the same; and the D1 purity test
+passes.
 
 ## Idempotence and recovery
 
@@ -966,7 +999,7 @@ reader does not have to re-derive them.
   dev Cranelift profile. No LLVM fallback override added.
 - Resolved `dev-dependency` versions: `rstest 0.26.1`, `googletest 0.13.0`,
   `pretty_assertions 1.4.1`, `insta 1.48.0`, `serde_json 1.0.151`,
-  `serial_test 4.0.1`, `eyre 0.6.14`.
+  `serial_test 4.0.1`, `eyre 0.6.14`, `cap-std 4.0.3`, `camino 1.2.6`.
 - First `make build` artefact name after the conversion:
   `target/debug/librstest_xfail.rlib` (underscore). The facade rlib is
   `librstest_xfail.rlib`; the Makefile `TARGET` default was repointed from the
@@ -976,7 +1009,7 @@ reader does not have to re-derive them.
 
 Task 1.1.1 is delivered. `cargo metadata` lists exactly the three workspace
 members (`rstest-xfail`, `rstest-xfail-core`, `rstest-xfail-macros`), the
-facade re-exports only `rstest_xfail::xfail` (snapshot + reachability test),
+facade re-exports only `rstest_xfail::xfail` (derived-surface test + snapshot),
 and constraint D1 is enforced by the `core_declares_no_dependencies` test. All
 deterministic gates and a 0-finding CodeRabbit review pass.
 
