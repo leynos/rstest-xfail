@@ -233,6 +233,22 @@ first `make build` rather than assuming it.
   denial is also why the facade surface test reads its own source through
   `cap_std::fs::Dir` and `camino::Utf8Path` rather than `std::fs`, which
   required adding that pair as `dev-dependencies`.
+- **CodeScene is a separate oracle from clippy and whitaker, and it can be run
+  locally before pushing.** The surface test's first revision scored the new
+  file 9.69 and failed two hosted gates ("new code is healthy", "enforce
+  advisory code health rules"), reporting a Complex Conditional in `leaf_name`.
+  Clippy and whitaker were both clean on the same revision, because neither
+  measures conditional complexity per function. The cause was one connective
+  nested in another:
+  `name.is_empty() || !name.chars().all(|c| c.is_alphanumeric() || c == '_')`.
+  `cs review <file>` reproduced the hosted finding exactly (9.68 locally
+  against the hosted 9.69, same function and same "2 complex conditional
+  expressions"), so the repair was confirmed against a real oracle before
+  pushing rather than discovered by another hosted round. Splitting the
+  condition into the named predicates `is_name_char` and `is_identifier` took
+  it to 10.0 with no biomarker, and the split is also clearer to read. Prefer a
+  local `cs review` on changed files before pushing any Rust change that adds
+  branching logic.
 
 ## Decision log
 
