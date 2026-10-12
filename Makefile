@@ -80,6 +80,12 @@ test: ## Run tests with warnings treated as errors
 # `.PHONY`. Marking it phony would suppress Make's implicit-rule search, and
 # this rule would then never match at all, because Make skips implicit rules
 # for phony targets. `build` and `release` would report "Nothing to be done".
+#
+# `FORCE` itself is declared phony, so a file that happens to be named `FORCE`
+# cannot satisfy the prerequisite and silently turn the rule back into a
+# timestamp comparison. Marking the prerequisite phony is safe; only marking
+# the artefact would break the implicit match.
+.PHONY: FORCE
 FORCE:
 
 target/%/$(TARGET): FORCE ## Build binary in debug or release mode

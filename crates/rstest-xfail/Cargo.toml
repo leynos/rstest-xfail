@@ -22,7 +22,10 @@ googletest = "0.13"
 pretty_assertions = "1.4.1"
 insta = "1.48.0"
 serde_json = "1.0.151"
-serial_test = "4.0.1"
+# `file_locks` supplies `file_serial`, which the `cargo metadata` tests use in
+# place of plain `serial`: the gate runs `cargo nextest`, which gives each test
+# its own process, and an in-process lock cannot serialize across processes.
+serial_test = { version = "4.0.1", features = ["file_locks"] }
 # Failure context in the `cargo metadata` integration tests; `eyre` keeps the
 # stage that failed visible without threading a bespoke error type through.
 eyre = "0.6.14"

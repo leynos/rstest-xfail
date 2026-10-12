@@ -208,10 +208,11 @@ first `make build` rather than assuming it.
   `Result` fails. Resolved `dev-dependency` versions: `rstest 0.26.1`,
   `googletest 0.13.0` (pinned back from the default latest to match the plan's
   stated manifest), `pretty_assertions 1.4.1`, `insta 1.48.0`,
-  `serde_json 1.0.151`, `serial_test 4.0.1`. Tests now use `assert_that!`
-  (panic-style) in `Result`-returning tests and pass `&BTreeSet<String>` to
-  `contains`; the exact-set test keeps `pretty_assertions`. The assertions'
-  meaning is unchanged; this is a form deviation recorded here.
+  `serde_json 1.0.151`, `serial_test 4.0.1`, `eyre 0.6.14`. Tests now use
+  `assert_that!` (panic-style) in `Result`-returning tests and pass
+  `&BTreeSet<String>` to `contains`; the exact-set test keeps
+  `pretty_assertions`. The assertions' meaning is unchanged; this is a form
+  deviation recorded here.
 - **Cranelift procedural-macro spike confirms risk R1 is retired for this
   task.** A bare `proc-macro = true` crate plus a `#[proc_macro_attribute]`
   no-op built, and an integration test that expands and runs the attribute,
@@ -554,7 +555,8 @@ googletest = "0.13"
 pretty_assertions = "1"
 insta = "1"
 serde_json = "1"
-serial_test = "3"
+serial_test = { version = "3", features = ["file_locks"] }
+eyre = "0.6"
 
 [lints]
 workspace = true
@@ -562,12 +564,22 @@ workspace = true
 
 Resolve the `dev-dependencies` to current caret versions at implementation time
 with
-`cargo add --dev rstest googletest pretty_assertions insta serde_json
-serial_test`,
+
+```bash
+cargo add --dev rstest googletest pretty_assertions insta serde_json eyre \
+  serial_test --features serial_test/file_locks
+```
+
 then record the resolved versions in `Surprises & discoveries`. The string form
 `insta::assert_snapshot!` used below needs no `insta` feature flag; do not add
 one. No feature flag is required for the `googletest` matchers `contains`,
 `eq`, and `not`.
+
+The `file_locks` feature is required, not optional: it supplies
+`serial_test::file_serial`, which the `cargo metadata` tests need because the
+gate runs `cargo nextest` and gives every test its own process, so a plain
+`serial` in-process lock would serialize nothing across them. `eyre` carries
+the per-stage failure context in those same tests.
 
 The crate roots expose exactly these public items.
 
@@ -951,7 +963,7 @@ reader does not have to re-derive them.
   dev Cranelift profile. No LLVM fallback override added.
 - Resolved `dev-dependency` versions: `rstest 0.26.1`, `googletest 0.13.0`,
   `pretty_assertions 1.4.1`, `insta 1.48.0`, `serde_json 1.0.151`,
-  `serial_test 4.0.1`.
+  `serial_test 4.0.1`, `eyre 0.6.14`.
 - First `make build` artefact name after the conversion:
   `target/debug/librstest_xfail.rlib` (underscore). The facade rlib is
   `librstest_xfail.rlib`; the Makefile `TARGET` default was repointed from the
@@ -1024,8 +1036,9 @@ these revisions are carried by pull request #112.
 - `workspace_metadata` and its helpers return `eyre::Result` with per-stage
   context, so a failure names whether `cargo metadata`, JSON parsing, or
   package lookup failed.
-- The `rstest` parameterized cases carry `#[serial]`, matching the module's
-  stated serialization guarantee.
+- The `rstest` parameterized cases carry a serialization attribute, matching
+  the module's stated serialization guarantee. (That attribute is
+  `file_serial`; see the formal-review entry below.)
 - The generated `stub.rs` placeholder test was deleted; the substantive
   workspace tests supersede it.
 - `rstest_xfail::xfail` carries a Rustdoc comment at the facade boundary.
@@ -1070,3 +1083,17 @@ these revisions are carried by pull request #112.
   named as the branch's actual toolchain, so the commands cannot be mistaken
   for current instructions. The spike's result and the fallback procedure are
   unchanged.
+- CodeRabbit's formal review then raised three findings, all applied here.
+  The `cargo metadata` tests had used `serial_test::serial`, which is inert
+  under the gate: `make test` selects `cargo nextest` whenever it is installed
+  (and CI installs it), nextest runs each test in its own process, and an
+  in-process lock therefore serializes nothing across them. They now use
+  `file_serial`, which takes an advisory file lock, with the `file_locks`
+  feature enabled on `serial_test`. This plan's own manifest block had also
+  omitted `eyre` and the `file_locks` feature, so a reader building from it
+  would have hit unresolved imports in the tests the block accompanies; both
+  are now shown. Finally, the artefact rule's `FORCE` prerequisite is declared
+  `.PHONY`, so a stray file named `FORCE` cannot satisfy it and silently demote
+  the rule back to a timestamp comparison. The two documentation gates this
+  repair itself tripped (`mdtablefix` reflow, `MD040` on the new fence) were
+  fixed before commit.

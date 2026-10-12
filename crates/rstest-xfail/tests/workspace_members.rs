@@ -4,6 +4,11 @@
 //! the intended boundaries. These shell out to `cargo metadata`, so they are
 //! serialized to bound package-cache lock contention.
 //!
+//! They use `file_serial` rather than `serial`. The gate runs `cargo nextest`,
+//! which gives every test its own process, so an in-process lock serializes
+//! nothing across them; `file_serial` takes an advisory file lock instead and
+//! still holds under a plain `cargo test` single-process run.
+//!
 //! The failure diagnostics use `eyre` context so a failure names the stage that
 //! failed — spawning `cargo metadata`, parsing its JSON, or locating a package
 //! — rather than surfacing a bare `serde_json` or I/O error.
@@ -13,7 +18,7 @@ use std::{collections::BTreeSet, process::Command};
 use eyre::{Context, ContextCompat, eyre};
 use googletest::prelude::{GoogleTestSupport, assert_that, contains, empty, eq};
 use rstest::rstest;
-use serial_test::serial;
+use serial_test::file_serial;
 
 /// The single member allowed to hold a dependency edge to a sibling crate.
 const FACADE: &str = "rstest-xfail";
@@ -122,7 +127,7 @@ fn declared_edges(metadata: &serde_json::Value) -> eyre::Result<BTreeSet<(String
 }
 
 #[test]
-#[serial]
+#[file_serial]
 fn workspace_has_exactly_three_intended_members() -> eyre::Result<()> {
     use pretty_assertions::assert_eq;
 
@@ -143,7 +148,7 @@ fn workspace_has_exactly_three_intended_members() -> eyre::Result<()> {
 /// than that it avoids a named blacklist. A blacklist would silently accept any
 /// newly added crate; an empty-set assertion cannot.
 #[test]
-#[serial]
+#[file_serial]
 fn core_declares_no_dependencies() -> eyre::Result<()> {
     let metadata = workspace_metadata()?;
     let deps = declared_dependencies(&metadata, "rstest-xfail-core")?;
@@ -162,7 +167,7 @@ fn core_declares_no_dependencies() -> eyre::Result<()> {
 /// depends on the facade. Asserting the complete edge set catches a new
 /// dependency edge anywhere in the workspace, which per-crate checks would miss.
 #[test]
-#[serial]
+#[file_serial]
 fn workspace_dependency_graph_matches_the_intended_boundaries() -> eyre::Result<()> {
     use pretty_assertions::assert_eq;
 
@@ -181,7 +186,7 @@ fn workspace_dependency_graph_matches_the_intended_boundaries() -> eyre::Result<
 }
 
 #[rstest]
-#[serial]
+#[file_serial]
 #[case("rstest-xfail-core")]
 #[case("rstest-xfail-macros")]
 #[case("rstest-xfail")]
