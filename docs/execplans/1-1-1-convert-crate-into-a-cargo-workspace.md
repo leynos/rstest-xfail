@@ -170,7 +170,7 @@ below as they emerge.
   because `tests/workflow_contracts/` (mutation-testing contract tests) is a
   separate, still-valid suite; only `stub.rs` and the new metadata/surface
   tests moved into `crates/rstest-xfail/tests/`.
-- [x] (2026-08-15 05:10Z) Stage D complete — ADR-001 written; documentation
+- [x] (2026-08-15 05:10Z) Stage D complete — ADR-002 written; documentation
   updated (`repository-layout.md`, `developers-guide.md`, `contents.md`, and
   the §5 realization note in `xfail-design.md`); Makefile `TARGET` repointed;
   roadmap 1.1.1 checkbox ticked.
@@ -257,12 +257,14 @@ first `make build` rather than assuming it.
   and SemVer lock belongs at the publishing boundary in a later roadmap item.
   Date/Author: 2026-06-24, planning team and review panel.
 - Decision: Add a minimal **ADR
-  `adr-001-cargo-workspace-and-crate-boundaries`** now. Rationale: the crate
+  `adr-002-cargo-workspace-and-crate-boundaries`** now. Rationale: the crate
   boundary is substantive and hard to reverse, and it is cited by every later
   task and by downstream `rstest-bdd` work. AGENTS.md and the style guide both
   call for capturing a substantive decision in an ADR referenced from the
-  design document. No ADR exists yet, so `adr-001` is the correct next sequence
-  number; ADR numbers are assigned in creation order and this plan does not
+  design document. The plan anticipated `adr-001` as the next sequence number,
+  but `adr-001` was taken by the shared CV-005 contract library decision on
+  `main` before this branch was rebased, so the crate-boundary ADR is numbered
+  `adr-002`; ADR numbers are assigned in creation order and this plan does not
   reserve numbers for the 1.1.2 and 1.1.3 ADRs. Date/Author: 2026-06-24,
   planning team and review panel.
 - Decision: Enforce the red stage with a **compile-fail import and a value
@@ -284,8 +286,10 @@ first `make build` rather than assuming it.
 
 ## Context and orientation
 
-The reader is assumed to know nothing of this repository. The current state is
-a single Cargo package.
+The reader is assumed to know nothing of this repository. The state this plan
+was written against — before the conversion it describes — was a single Cargo
+package. The items below record that starting point; the branch that implements
+the plan no longer has them.
 
 - `Cargo.toml` (root) declares `package.name = "rstest-xfail"`, edition 2024,
   version 0.1.0, and licence ISC. It carries large lint tables:
@@ -679,7 +683,7 @@ Both red tests now pass. Run `make test` to confirm.
    `insta` snapshot plus the body-pass-through assertion) and generate the
    snapshot. Add the `rstest` parameterized presence test and the D1 purity
    test to `crates/rstest-xfail/tests/workspace_members.rs`.
-3. Write `docs/adr-001-cargo-workspace-and-crate-boundaries.md`.
+3. Write `docs/adr-002-cargo-workspace-and-crate-boundaries.md`.
 4. Update `docs/repository-layout.md`, `docs/developers-guide.md`,
    `docs/contents.md`, and add the one-line realization note plus ADR reference
    to `docs/xfail-design.md` §5.
@@ -806,7 +810,7 @@ These deferrals are deliberate scoping, not omissions.
 
 ### The ADR
 
-Create `docs/adr-001-cargo-workspace-and-crate-boundaries.md` following the
+Create `docs/adr-002-cargo-workspace-and-crate-boundaries.md` following the
 style guide's required ADR sections. It records only the workspace and boundary
 decision, not strictness (1.1.2) or async (1.1.3):
 
@@ -876,7 +880,9 @@ Red-Green-Refactor evidence to record:
 Quality criteria (what "done" means):
 
 - **Tests.** `make test` exits 0. The `workspace_members` and `public_surface`
-  tests pass; the disposable stub still passes; doctests pass.
+  tests pass; doctests pass. The disposable `stub.rs` placeholder described in
+  the plan was deleted during Stage D, so it is no longer part of this
+  criterion.
 - **Lint.** `make lint` exits 0 with no `unwrap_used`, `expect_used`,
   `missing_docs`, or `missing_crate_level_docs` diagnostics across all targets
   and features.
@@ -884,7 +890,7 @@ Quality criteria (what "done" means):
 - **Markdown and diagrams.** `make markdownlint` and `make nixie` pass for the
   new and edited documentation.
 - **Audit.** `make audit` runs once at the workspace root and passes.
-- **Boundary (D1).** The `core_has_no_forbidden_dependencies` test passes, and
+- **Boundary (D1).** The `core_declares_no_dependencies` test passes, and
   `cargo tree -p rstest-xfail-core` shows no dependency on
   `rstest-xfail-macros`, `rstest-xfail`, `syn`, `quote`, or `proc-macro2`.
 - **CodeRabbit.** `coderabbit review --agent` reports no outstanding concerns,
@@ -948,8 +954,8 @@ reader does not have to re-derive them.
 Task 1.1.1 is delivered. `cargo metadata` lists exactly the three workspace
 members (`rstest-xfail`, `rstest-xfail-core`, `rstest-xfail-macros`), the
 facade re-exports only `rstest_xfail::xfail` (snapshot + reachability test),
-and constraint D1 is enforced by the `core_has_no_forbidden_dependencies` test.
-All deterministic gates and a 0-finding CodeRabbit review pass.
+and constraint D1 is enforced by the `core_declares_no_dependencies` test. All
+deterministic gates and a 0-finding CodeRabbit review pass.
 
 Deviations from the plan, all recorded above:
 
@@ -1039,3 +1045,11 @@ these revisions are carried by pull request #112.
   core vocabulary at roadmap 1.2.x; the `INTENDED_EDGES` table in
   `workspace_members.rs` is where it is re-declared, and the D1 gate is
   unaffected because D1 constrains the core's own dependencies.
+- The final reconciling pass corrected plan text that still named artefacts the
+  implemented branch does not have. The crate-boundary ADR is
+  `adr-002-cargo-workspace-and-crate-boundaries.md` (`adr-001` having gone to
+  the shared CV-005 contract library on `main`), the D1 gate is named
+  `core_declares_no_dependencies`, and the deferred `stub.rs` placeholder is
+  described as deleted rather than as still passing. Acceptance criteria that
+  named a test or file the branch no longer carries would otherwise have made a
+  completed task look incomplete.
