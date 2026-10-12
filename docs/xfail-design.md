@@ -74,7 +74,7 @@ Non-goals:
 ## 5. Architecture
 
 The crate split below is realized by roadmap task 1.1.1 (see
-[ADR-001](adr-001-cargo-workspace-and-crate-boundaries.md)); the crate roots
+[ADR-002](adr-002-cargo-workspace-and-crate-boundaries.md)); the crate roots
 are placeholders until their implementations land in roadmap 1.2.x and 2.1.x.
 
 The repository should become a Cargo workspace with three crates:

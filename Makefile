@@ -4,6 +4,8 @@
 SHELL := bash
 
 
+# `TARGET` names the facade's library artefact. The hyphenated crate name maps
+# to an underscored file name, so the artefact is `librstest_xfail.rlib`.
 TARGET ?= librstest_xfail.rlib
 
 CARGO ?= cargo
@@ -67,6 +69,12 @@ clean: ## Remove build artefacts
 test: ## Run tests with warnings treated as errors
 	RUSTFLAGS="$(RUST_FLAGS) $(STANDARD_RUSTFLAGS)" $(CARGO) $(TEST_CMD) $(TEST_FLAGS) $(BUILD_JOBS)
 	RUSTFLAGS="$(RUST_FLAGS) $(STANDARD_RUSTFLAGS)" $(CARGO) test --doc --workspace --all-features
+
+# Cargo owns the freshness decision for the artefact, so this rule always
+# delegates to `cargo build` rather than letting Make compare timestamps. Make
+# would otherwise treat an existing artefact as up to date forever, because the
+# rule declares no source or manifest prerequisites, and skip the rebuild.
+.PHONY: target/debug/$(TARGET) target/release/$(TARGET)
 
 target/%/$(TARGET): ## Build binary in debug or release mode
 	$(if $(findstring release,$(@)),$(RELEASE_RUSTFLAGS) )$(CARGO) build $(BUILD_JOBS) $(if $(findstring release,$(@)),--release)

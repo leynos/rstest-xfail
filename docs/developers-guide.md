@@ -26,8 +26,13 @@ The repository is a Cargo workspace with three member crates under `crates/`:
 `cargo` operates across all members by default. Target one crate with
 `-p <crate>` (for example `cargo test -p rstest-xfail`). Lint and dependency
 policy are inherited from `[workspace.lints]` and `[workspace.dependencies]` in
-the virtual root manifest; individual member manifests opt in with
-`[lints] workspace = true` and `*.workspace = true`.
+the virtual root manifest. Each member manifest opts in key by key rather than
+wholesale: `[lints] workspace = true` inherits the lint policy, and the package
+fields and dependencies that the workspace owns are written
+`version.workspace = true`, `edition.workspace = true`, and
+`rstest-xfail-macros.workspace = true`. Fields the member owns outright are
+written as ordinary keys, so a dependency or package field is inherited only
+where the member names it explicitly.
 
 Use `make all` as the public entrypoint for formatting, linting, and tests.
 `make lint` runs rustdoc, Clippy, and Whitaker. `make test` prefers

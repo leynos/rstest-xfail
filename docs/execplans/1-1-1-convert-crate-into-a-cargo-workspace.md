@@ -179,8 +179,8 @@ below as they emerge.
 - [x] (2026-08-15 05:15Z) Roadmap 1.1.1 checkbox ticked in `docs/roadmap.md`
   (the `- [x] 1.1.1.` line).
 - [x] (2026-08-15 05:45Z) Draft pull request #12 opened/updated with title
-  `Convert the crate into a Cargo workspace (1.1.1)`, linking this execplan
-  and roadmap §1.1.1; branch pushed (5 implementation commits).
+  `Convert the crate into a Cargo workspace (1.1.1)`, linking this execplan and
+  roadmap §1.1.1; branch pushed (5 implementation commits).
 
 Replace `(pending)` with a UTC timestamp as each row completes, for example
 `- [x] (2026-06-24 14:00Z) Stage B complete.` Split any partially completed row
@@ -227,10 +227,11 @@ first `make build` rather than assuming it.
   to re-export would prejudge that decision and lock a meaningless item into
   the public surface that the snapshot test then advertises as the contract.
   The roadmap criterion's "intended public surface" at 1.1.1 is the `#[xfail]`
-  attribute alone. The facade still declares a path dependency on
-  `rstest-xfail-core` to establish the intended dependency graph; that edge is
-  verified by the D1 metadata test even though no public re-export exists yet.
-  Date/Author: 2026-06-24, planning team and review panel.
+  attribute alone. The facade consequently declares a dependency only on
+  `rstest-xfail-macros`; the path dependency on `rstest-xfail-core` is deferred
+  to roadmap 1.2.x, when the core first exposes items the facade can re-export
+  (revised after review, see Post-review revisions). Date/Author: 2026-06-24,
+  planning team and review panel.
 - Decision: Ship a **no-op `#[xfail]` placeholder attribute** in the macros
   crate, and prove it passes a body through unchanged. Rationale: `#[xfail]` is
   the facade's intended surface, and a `proc-macro = true` crate must export a
@@ -341,18 +342,21 @@ no logic to wrap yet.
   consumer, out of scope here.
 
 For screen readers: the following diagram shows the three crates as boxes with
-arrows from the facade to both the macros crate and the core crate. The core
-has no outgoing arrows, expressing constraint D1. The macros-to-core arrow
-arrives only in roadmap 2.1.x and is therefore not drawn.
+an arrow from the facade to the macros crate. The core has no incoming and no
+outgoing arrows at this task, expressing constraint D1, and is drawn detached
+for that reason. Three arrows are therefore deferred: the facade-to-core edge
+arrives with the core vocabulary (roadmap 1.2.x), and the macros-to-core edge
+with the macro rewriting (roadmap 2.1.x).
 
 ```mermaid
 flowchart LR
     facade["rstest-xfail (facade)"] --> macros["rstest-xfail-macros (driving adapter)"]
-    facade --> core["rstest-xfail-core (domain core)"]
+    core["rstest-xfail-core (domain core)"]
 ```
 
-*Figure 1: The 1.1.1 dependency arrows. The core is a pure leaf; the
-macros-to-core edge is deferred to 2.1.x.*
+*Figure 1: The 1.1.1 dependency arrows. Only the facade-to-macros edge is
+declared; the facade-to-core and macros-to-core edges are deferred to 1.2.x and
+2.1.x respectively.*
 
 Constraint D1 is the enforceable form of this mapping.
 
@@ -376,13 +380,18 @@ version = "0.1.0"
 edition = "2024"
 license = "ISC"
 repository = "https://github.com/leynos/rstest-xfail"
-homepage = "https://github.com/leynos/rstest-xfail"
+# `homepage` is deliberately absent: it would duplicate `repository`, which
+# Cargo warns about (`package.homepage` is redundant with `package.repository`).
 readme = "README.md"
 keywords = ["rust", "testing", "macros", "unit-tests"]
 categories = ["development-tools"]
 
 [workspace.dependencies]
-rstest-xfail-core = { path = "crates/rstest-xfail-core", version = "0.1.0" }
+# `rstest-xfail-core` is deliberately absent until a member depends on it. The
+# workspace declares a dependency here only once a member names it with
+# `<crate>.workspace = true`; an entry no member uses is reported by Cargo as an
+# unused workspace dependency. The core's entry arrives with the facade
+# re-exports in roadmap 1.2.x.
 rstest-xfail-macros = { path = "crates/rstest-xfail-macros", version = "0.1.0" }
 
 [workspace.lints.clippy]
@@ -472,7 +481,6 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-homepage.workspace = true
 readme.workspace = true
 keywords.workspace = true
 categories.workspace = true
@@ -493,7 +501,6 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-homepage.workspace = true
 readme.workspace = true
 keywords.workspace = true
 categories.workspace = true
@@ -517,15 +524,15 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-homepage.workspace = true
 readme.workspace = true
 keywords.workspace = true
 categories.workspace = true
 
 [dependencies]
-# Public re-exports of core types arrive in roadmap 1.2.x; the dependency edge
-# is declared now to establish the intended workspace graph (verified by D1).
-rstest-xfail-core.workspace = true
+# Only the macro crate is named here. A dependency on `rstest-xfail-core` is
+# deliberately absent until the facade re-exports core types (roadmap 1.2.x):
+# the core exposes no public items yet, so declaring the edge now would be a
+# dependency no target can use, which Cargo reports as `unused_dependencies`.
 rstest-xfail-macros.workspace = true
 
 [dev-dependencies]
@@ -706,139 +713,22 @@ Apply this override only if validation fails; do not add it pre-emptively.
 
 ### The member-set and core-purity tests
 
-`crates/rstest-xfail/tests/workspace_members.rs` (final form):
+The test file is committed at `crates/rstest-xfail/tests/workspace_members.rs`;
+it is the authoritative form and is not duplicated here. Its shape at 1.1.1 is:
+an `INTENDED_EDGES` table naming the one declared intra-workspace edge (the
+facade to the macros crate), a `workspace_metadata` helper that shells out to
+`cargo metadata` and returns `eyre::Result` with per-stage context, and four
+serialized tests: the member set matches exactly, the core declares no
+dependencies at all (D1), the declared edge set equals `INTENDED_EDGES`, and
+each intended member is present.
 
-```rust
-//! End-to-end checks over `cargo metadata` for roadmap task 1.1.1: the
-//! workspace exposes exactly the three intended members, and the core crate
-//! depends on none of its siblings or on procedural-macro tooling (constraint
-//! D1). These shell out to `cargo metadata`, so they are serialized to bound
-//! package-cache lock contention.
-
-use std::{collections::BTreeSet, process::Command};
-
-use googletest::prelude::{contains, eq, not, verify_that};
-use rstest::rstest;
-use serial_test::serial;
-
-/// Runs `cargo metadata` and returns the parsed JSON document.
-///
-/// Returns `Result` so the helper stays outside the `expect`-in-tests
-/// allowance; helpers must propagate errors rather than panic. `--offline` and
-/// `CARGO_NET_OFFLINE` avoid any registry refresh and reduce lock contention.
-fn workspace_metadata() -> Result<serde_json::Value, Box<dyn std::error::Error>> {
-    let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned());
-    let output = Command::new(cargo)
-        .args(["metadata", "--no-deps", "--offline", "--format-version", "1"])
-        .env("CARGO_NET_OFFLINE", "1")
-        .output()?;
-    if !output.status.success() {
-        return Err(format!(
-            "cargo metadata failed: {}",
-            String::from_utf8_lossy(&output.stderr)
-        )
-        .into());
-    }
-    Ok(serde_json::from_slice(&output.stdout)?)
-}
-
-/// Extracts the set of member package names from a `cargo metadata` document.
-///
-/// Indexing a `serde_json::Value` is panic-free: a missing key yields
-/// `Value::Null`, which `as_array` then reports as `None`. This is a
-/// third-party `Index` impl and is not flagged by `clippy::indexing_slicing`.
-fn member_names(
-    metadata: &serde_json::Value,
-) -> Result<BTreeSet<String>, Box<dyn std::error::Error>> {
-    let member_ids: BTreeSet<&str> = metadata["workspace_members"]
-        .as_array()
-        .ok_or("workspace_members is not an array")?
-        .iter()
-        .filter_map(|id| id.as_str())
-        .collect();
-    let packages = metadata["packages"]
-        .as_array()
-        .ok_or("packages is not an array")?;
-    let names = packages
-        .iter()
-        .filter(|pkg| pkg["id"].as_str().is_some_and(|id| member_ids.contains(id)))
-        .filter_map(|pkg| pkg["name"].as_str().map(str::to_owned))
-        .collect();
-    Ok(names)
-}
-
-/// Reads a named package's declared dependency names from a metadata document.
-fn declared_dependencies(
-    metadata: &serde_json::Value,
-    package: &str,
-) -> Result<BTreeSet<String>, Box<dyn std::error::Error>> {
-    let packages = metadata["packages"]
-        .as_array()
-        .ok_or("packages is not an array")?;
-    let found = packages
-        .iter()
-        .find(|pkg| pkg["name"].as_str() == Some(package))
-        .ok_or("package not found in metadata")?;
-    let deps = found["dependencies"]
-        .as_array()
-        .ok_or("dependencies is not an array")?
-        .iter()
-        .filter_map(|dep| dep["name"].as_str().map(str::to_owned))
-        .collect();
-    Ok(deps)
-}
-
-#[test]
-#[serial]
-fn workspace_has_exactly_three_intended_members()
--> Result<(), Box<dyn std::error::Error>> {
-    use pretty_assertions::assert_eq;
-
-    let metadata = workspace_metadata()?;
-    let actual = member_names(&metadata)?;
-    let expected: BTreeSet<String> =
-        ["rstest-xfail", "rstest-xfail-core", "rstest-xfail-macros"]
-            .into_iter()
-            .map(str::to_owned)
-            .collect();
-
-    assert_eq!(actual, expected, "workspace member set must match exactly");
-    Ok(())
-}
-
-#[test]
-#[serial]
-fn core_has_no_forbidden_dependencies()
--> Result<(), Box<dyn std::error::Error>> {
-    let metadata = workspace_metadata()?;
-    let deps = declared_dependencies(&metadata, "rstest-xfail-core")?;
-    for forbidden in ["rstest-xfail-macros", "rstest-xfail", "syn", "quote", "proc-macro2"] {
-        verify_that!(&deps, not(contains(eq(forbidden.to_owned()))))?;
-    }
-    Ok(())
-}
-
-#[rstest]
-#[case("rstest-xfail-core")]
-#[case("rstest-xfail-macros")]
-#[case("rstest-xfail")]
-fn each_intended_member_is_present(
-    #[case] expected: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let metadata = workspace_metadata()?;
-    let names = member_names(&metadata)?;
-    verify_that!(names, contains(eq(expected.to_owned())))?;
-    Ok(())
-}
-```
-
-The matchers are imported narrowly (`contains`, `eq`, `not`, `verify_that`)
-rather than via `use googletest::prelude::*`, because the glob brings a
-single-parameter `Result` alias into scope that would clash with the two-
-parameter `Result<_, Box<dyn std::error::Error>>` helper signatures.
-`--no-deps` keeps each package's declared `dependencies` array available while
-omitting the resolved graph, which is what both the member-set and D1 checks
-need.
+The matchers are imported narrowly (`contains`, `eq`, `empty`, `assert_that`,
+and `GoogleTestSupport`) rather than via `use googletest::prelude::*`, because
+the glob brings a single-parameter `Result` alias into scope that would clash
+with the helper signatures, and because the format-arguments form of
+`assert_that!` requires `GoogleTestSupport` explicitly. `--no-deps` keeps each
+package's declared `dependencies` array available while omitting the resolved
+graph, which is what both the member-set and D1 checks need.
 
 ### The facade public-surface test
 
@@ -1052,8 +942,8 @@ reader does not have to re-derive them.
 Task 1.1.1 is delivered. `cargo metadata` lists exactly the three workspace
 members (`rstest-xfail`, `rstest-xfail-core`, `rstest-xfail-macros`), the
 facade re-exports only `rstest_xfail::xfail` (snapshot + reachability test),
-and constraint D1 is enforced by the `core_has_no_forbidden_dependencies`
-test. All deterministic gates and a 0-finding CodeRabbit review pass.
+and constraint D1 is enforced by the `core_has_no_forbidden_dependencies` test.
+All deterministic gates and a 0-finding CodeRabbit review pass.
 
 Deviations from the plan, all recorded above:
 
@@ -1064,9 +954,9 @@ Deviations from the plan, all recorded above:
   containers; the D1/presence assertions use `assert_that!` over
   `&BTreeSet<String>` rather than the plan's `verify_that!` form. The
   assertions' meaning is unchanged.
-- The final public_surface test applies the placeholder attribute to a `const
-  fn` solely to satisfy `clippy::missing_const_for_fn`; this does not change
-  the reachability or body-pass-through contract.
+- The final public_surface test applies the placeholder attribute to a
+  `const fn` solely to satisfy `clippy::missing_const_for_fn`; this does not
+  change the reachability or body-pass-through contract.
 
 Lesson for 1.2.x and 2.1.x: the workspace skeleton, D1 purity gate, and the
 surface snapshot give the follow-up tasks a stable boundary to build on. The
@@ -1085,5 +975,48 @@ a `Result` alias clash from a `googletest` glob import), added an automated D1
 purity gate, hardened the placeholder-macro test to prove genuine body
 pass-through, corrected the red-stage sequencing, captioned the risk table,
 added the draft-PR delivery step, and enumerated the actual gate set in the
-acceptance criteria. No implementation has begun; the plan awaits approval per
-the `Approval gate` discipline in the `execplans` skill.
+acceptance criteria.
+
+The plan was approved and fully implemented: Stages C and D are complete and
+task 1.1.1 is delivered, as recorded in the outcomes and retrospective above.
+The pull request carrying it was **draft** while this was a pre-implementation
+plan; draft status tracks the pull request lifecycle, not implementation
+completeness, and is independent of the "No implementation has begun" statement
+that applied only to the original draft of this plan.
+
+### Post-review revisions
+
+After review feedback on pull request #12 the branch was rebased onto `main`
+(bringing in the shared build standard, the CV-005 workflow contracts, and the
+`nightly-2026-10-11` toolchain bump) and the following changes were applied:
+
+- `workspace_members.rs` now asserts an **empty** direct dependency set for
+  `rstest-xfail-core` instead of testing a forbidding-name blacklist, so the D1
+  gate cannot be satisfied by a dependency the blacklist happens not to name.
+- `workspace_members.rs` also pins the complete intra-workspace dependency
+  edge set, which catches a new edge anywhere in the graph rather than only in
+  the core.
+- `workspace_metadata` and its helpers return `eyre::Result` with per-stage
+  context, so a failure names whether `cargo metadata`, JSON parsing, or
+  package lookup failed.
+- The `rstest` parameterized cases carry `#[serial]`, matching the module's
+  stated serialization guarantee.
+- The generated `stub.rs` placeholder test was deleted; the substantive
+  workspace tests supersede it.
+- `rstest_xfail::xfail` carries a Rustdoc comment at the facade boundary.
+- The ADR gained a `Requirements` section with functional and technical
+  subsections and a table caption, and all ADR headings use sentence case.
+- The `Makefile` build rules are declared phony so Make always delegates the
+  freshness decision to Cargo; previously an existing artefact suppressed every
+  later rebuild.
+- `homepage` was removed from `[workspace.package]` and every member manifest.
+  Cargo warns that `package.homepage` is redundant with `package.repository`
+  when both are set, and `repository` already carries the canonical project URL.
+- The facade no longer declares a dependency on `rstest-xfail-core`, and the
+  `[workspace.dependencies]` entry for the core was dropped with it. The core
+  exposes no public items at 1.1.1, so the edge was a dependency no target
+  could use, which Cargo reports as an unused dependency (and as an unused
+  workspace dependency once the member edge is gone). The edge returns with the
+  core vocabulary at roadmap 1.2.x; the `INTENDED_EDGES` table in
+  `workspace_members.rs` is where it is re-declared, and the D1 gate is
+  unaffected because D1 constrains the core's own dependencies.

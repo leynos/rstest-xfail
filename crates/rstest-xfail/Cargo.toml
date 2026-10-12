@@ -5,15 +5,15 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-homepage.workspace = true
 readme.workspace = true
 keywords.workspace = true
 categories.workspace = true
 
 [dependencies]
-# Public re-exports of core types arrive in roadmap 1.2.x; the dependency edge
-# is declared now to establish the intended workspace graph (verified by D1).
-rstest-xfail-core.workspace = true
+# Only the macro crate is named here. A dependency on `rstest-xfail-core` is
+# deliberately absent until the facade re-exports core types (roadmap 1.2.x):
+# the core exposes no public items yet, so declaring the edge now would be a
+# dependency no target can use, which Cargo reports as `unused_dependencies`.
 rstest-xfail-macros.workspace = true
 
 [dev-dependencies]
@@ -23,6 +23,9 @@ pretty_assertions = "1.4.1"
 insta = "1.48.0"
 serde_json = "1.0.151"
 serial_test = "4.0.1"
+# Failure context in the `cargo metadata` integration tests; `eyre` keeps the
+# stage that failed visible without threading a bespoke error type through.
+eyre = "0.6.14"
 
 [lints]
 workspace = true

@@ -10,14 +10,19 @@ members = [
 version = "0.1.0"
 edition = "2024"
 license = "ISC"
+# `homepage` is deliberately absent: it would duplicate `repository`, which
+# Cargo warns about (`package.homepage` is redundant with `package.repository`).
 repository = "https://github.com/leynos/rstest-xfail"
-homepage = "https://github.com/leynos/rstest-xfail"
 readme = "README.md"
 keywords = ["rust", "testing", "macros", "unit-tests"]
 categories = ["development-tools"]
 
 [workspace.dependencies]
-rstest-xfail-core = { path = "crates/rstest-xfail-core", version = "0.1.0" }
+# `rstest-xfail-core` is deliberately absent until a member depends on it. The
+# workspace declares a dependency here only once a member names it with
+# `<crate>.workspace = true`; an entry no member uses is reported by Cargo as an
+# unused workspace dependency. The core's entry arrives with the facade
+# re-exports in roadmap 1.2.x.
 rstest-xfail-macros = { path = "crates/rstest-xfail-macros", version = "0.1.0" }
 
 [workspace.lints.clippy]

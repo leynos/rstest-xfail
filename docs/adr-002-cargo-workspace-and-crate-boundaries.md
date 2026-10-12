@@ -1,11 +1,15 @@
-# ADR-001: Cargo workspace and crate boundaries
+# Architectural decision record (ADR) 002: Cargo workspace and crate boundaries
 
-**Status:** Accepted, 2026-08-15, "Adopt a three-crate Cargo workspace under
-`crates/` with a pure core".
+## Status
 
-**Date:** 2026-08-15.
+Accepted, 2026-10-12. The repository adopts a three-crate Cargo workspace under
+`crates/` with a virtual manifest at the root and a pure core leaf.
 
-## Context and Problem Statement
+## Date
+
+2026-10-12.
+
+## Context and problem statement
 
 The single `rstest-xfail` package cannot let downstream consumers (notably
 `rstest-bdd`) reuse classification logic without importing procedural-macro
@@ -13,7 +17,33 @@ expansion machinery. The technical design (xfail-design.md §5) mandates a split
 so that `rstest-bdd` can depend on a pure core crate rather than on the
 proc-macro adapter.
 
-## Decision Drivers
+## Requirements
+
+### Functional requirements
+
+- Expose the intended user-facing surface through one facade crate, so ordinary
+  users name a single dependency and import `rstest_xfail::xfail`.
+- Keep the classification vocabulary importable by downstream libraries, such
+  as `rstest-bdd`, without importing procedural-macro expansion machinery.
+- Let the facade reach both the core vocabulary and the procedural macro
+  through declared, one-way dependency edges. Only the facade-to-macros edge is
+  declared at task 1.1.1: the core exposes no public items yet, so an edge to
+  it would be a dependency no target could use, which Cargo reports as an
+  unused dependency. The facade-to-core edge arrives with the core vocabulary
+  in roadmap 1.2.x.
+
+### Technical requirements
+
+- Enforce dependency rule D1: the core depends on no sibling crate and on no
+  procedural-macro tooling (`syn`, `quote`, `proc-macro2`).
+- Inherit package metadata, lint policy, and shared dependency declarations
+  across all members from the virtual workspace root, so the three crates
+  cannot drift apart.
+- Keep accepting the Cranelift-backed procedural-macro build, or document a
+  fallback, because the development profile compiles with the Cranelift
+  code-generation backend.
+
+## Decision drivers
 
 - Keep the procedural macro out of downstream runtime integrations.
 - Let the core classification vocabulary be reusable from `rstest-bdd` and any
@@ -21,15 +51,24 @@ proc-macro adapter.
 - Keep the lint, metadata, and dependency policy consistent across the three
   crates through workspace inheritance.
 
-## Options Considered
+## Options considered
 
-| Option                                                     | Outcome                                                                                                          |
-| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Single package                                             | No usable boundary: `rstest-bdd` would depend on the proc-macro crate or duplicate classification logic.         |
-| Three crates under `crates/` with a virtual workspace root | Selected: peers with one-way dependency edges and a pure core leaf.                                              |
-| Facade as the root package                                 | Rejected: the core has no dependency on the facade, so nesting it under the facade would misrepresent the graph. |
+### Option A: Keep the single package
 
-## Decision Outcome / Proposed Direction
+Rejected. There is no usable boundary: `rstest-bdd` would either depend on the
+proc-macro crate or duplicate the classification logic.
+
+### Option B: Three crates under `crates/` with a virtual workspace root
+
+Accepted. The three crates are peers with one-way dependency edges and a pure
+core leaf.
+
+### Option C: Make the facade the root package
+
+Rejected. The core has no dependency on the facade, so nesting it under the
+facade would misrepresent the dependency graph.
+
+## Decision outcome
 
 Adopt a virtual workspace manifest at the repository root with three members
 under `crates/`:
@@ -46,7 +85,7 @@ The workspace inherits package metadata from `[workspace.package]`, lints from
 depend on none of its siblings and on no procedural-macro tooling (`syn`,
 `quote`, `proc-macro2`).
 
-## Goals and Non-Goals
+## Goals and non-goals
 
 Goals:
 
@@ -60,7 +99,7 @@ Non-Goals:
 - Recording strictness policy (roadmap 1.1.2) or the async strategy
   (roadmap 1.1.3); those are separate ADRs.
 
-## Migration Plan
+## Migration plan
 
 1. Rewrite the root manifest as a virtual workspace and add the three member
    crates (done in task 1.1.1).
@@ -69,7 +108,7 @@ Non-Goals:
 3. Follow-up tasks fill in the core vocabulary (1.2.x) and the macro rewriting
    (2.1.x), then decide the facade re-export scope.
 
-## Known Risks and Limitations
+## Known risks and limitations
 
 - Cranelift-on-procedural-macro build risk (R1 in the execplan) is retired by
   the spike but may resurface on later toolchains; the `.cargo/config.toml`
@@ -78,7 +117,7 @@ Non-Goals:
   are placeholders and will be replaced by real implementations without
   changing the boundaries recorded here.
 
-## Architectural Rationale
+## Architectural rationale
 
 The pure-core leaf keeps classification semantics importable by downstream
 libraries without pulling in procedural-macro expansion, and the workspace
