@@ -4,7 +4,7 @@ This ExecPlan (execution plan) is a living document. The sections `Constraints`,
 `Tolerances`, `Risks`, `Progress`, `Surprises & discoveries`, `Decision log`,
 and `Outcomes & retrospective` must be kept up to date as work proceeds.
 
-Status: DRAFT
+Status: COMPLETE
 
 This plan delivers roadmap task **1.1.1** (see [roadmap](../roadmap.md) §1.1).
 It converts the single-package `rstest-xfail` crate into a three-crate Cargo
@@ -94,9 +94,11 @@ Hard invariants. Violation requires escalation, not a workaround.
   `[workspace.lints]` with zero net change to the enforced lint set, and every
   member sets `[lints] workspace = true`. `clippy.toml` stays at the workspace
   root, unchanged.
-- **C-GREEN-1 — toolchain unchanged.** `rust-toolchain.toml`
-  (`nightly-2026-05-28`) is not bumped by this task. The commit gate passes on
-  the existing pinned toolchain.
+- **C-GREEN-1 — toolchain unchanged.** `rust-toolchain.toml` is not bumped by
+  this task. The commit gate passes on the existing pinned toolchain. The pin
+  was `nightly-2026-05-28` when this plan was written; the rebase onto `main`
+  brought `nightly-2026-10-11`, and the constraint holds for whichever pin the
+  branch inherits.
 - **C-SCOPE-1 — no downstream redesign.** Do not implement classifier types
   (1.2.x), macro behaviour (2.1.x), or the strictness and async ADRs (1.1.2,
   1.1.3). Do not restructure `docs/roadmap.md` beyond ticking the 1.1.1
@@ -309,9 +311,10 @@ the plan no longer has them.
 - `.cargo/config.toml` enables the unstable `codegen-backend` feature and sets
   `[profile.dev] codegen-backend = "cranelift"`, plus a `mold` linker
   configuration for Linux.
-- `rust-toolchain.toml` pins `nightly-2026-05-28` with the `clippy`,
-  `llvm-tools-preview`, `rustc-codegen-cranelift-preview`, and `rustfmt`
-  components.
+- `rust-toolchain.toml` pins a nightly with the `clippy`, `llvm-tools-preview`,
+  `rustc-codegen-cranelift-preview`, and `rustfmt` components. It pinned
+  `nightly-2026-05-28` when this plan was written; the rebased branch inherits
+  `nightly-2026-10-11` from `main`, and this task does not change it either way.
 - `Makefile` is the public entrypoint. `make check-fmt`, `make lint`, and
   `make test` are the commit gates; `make all` runs the three in sequence.
   `make test` prefers `cargo nextest run` and also runs
@@ -701,7 +704,12 @@ All commands run from the repository root unless stated otherwise.
 
 ### Cranelift procedural-macro validation and fallback
 
-After the macros crate skeleton exists:
+After the macros crate skeleton exists. These are the commands as originally
+run, on the toolchain pinned at the time (`nightly-2026-05-28`); they are
+historical spike evidence, recorded so the result can be audited. The pin on
+the delivered branch is `nightly-2026-10-11`, and the equivalent current
+commands are the same three with the pinned toolchain, which the `make` gates
+invoke without naming a version:
 
 ```text
 cargo +nightly-2026-05-28 build -p rstest-xfail-macros
@@ -1053,3 +1061,12 @@ these revisions are carried by pull request #112.
   described as deleted rather than as still passing. Acceptance criteria that
   named a test or file the branch no longer carries would otherwise have made a
   completed task look incomplete.
+- The ExecPlan completeness assessment confirmed no blocking defect and named
+  three documentation corrections, all applied here. The plan's header now reads
+  `Status: COMPLETE` rather than `DRAFT`, matching the delivered outcomes.
+  `repository-layout.md` no longer lists the deleted `tests/stub.rs`. The
+  Cranelift spike commands are labelled as historical evidence on the pin that
+  was current when the spike ran, with the inherited `nightly-2026-10-11` pin
+  named as the branch's actual toolchain, so the commands cannot be mistaken
+  for current instructions. The spike's result and the fallback procedure are
+  unchanged.

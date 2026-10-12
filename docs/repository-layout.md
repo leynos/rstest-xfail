@@ -25,7 +25,6 @@ compact and omits build output such as `target/`.
 │   │   └── tests/
 │   │       ├── public_surface.rs
 │   │       ├── snapshots/
-│   │       ├── stub.rs
 │   │       └── workspace_members.rs
 │   ├── rstest-xfail-core/
 │   │   ├── Cargo.toml
