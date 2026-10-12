@@ -40,6 +40,16 @@ fn facade_source() -> Result<String> {
         .map_err(|error| eyre::eyre!("failed to read {root}/src/lib.rs: {error}"))
 }
 
+/// Reports whether a character may appear in an exported name.
+///
+/// Kept apart from [`is_identifier`] so that neither predicate has to nest one
+/// connective inside another; `CodeScene` flags that nesting as a complexity
+/// biomarker, and the split is clearer to read either way.
+fn is_name_char(character: char) -> bool { character.is_alphanumeric() || character == '_' }
+
+/// Reports whether `name` is a non-empty run of name characters.
+fn is_identifier(name: &str) -> bool { !name.is_empty() && name.chars().all(is_name_char) }
+
 /// Returns the name a `use` item binds, following an `as` rename.
 fn leaf_name(item: &str) -> Result<String> {
     if item.contains(['{', '}']) {
@@ -50,7 +60,7 @@ fn leaf_name(item: &str) -> Result<String> {
         None => (item, None),
     };
     let name = alias.unwrap_or_else(|| path.rsplit("::").next().unwrap_or(path));
-    if name.is_empty() || !name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+    if !is_identifier(name) {
         bail!("could not read an exported name from `{item}`");
     }
     Ok(name.to_owned())
@@ -90,7 +100,7 @@ fn declared_name(declaration: &str) -> Result<String> {
         bail!("`pub {keyword}` is not a form this test attributes to exactly one item");
     }
     let name = rest
-        .split(|c: char| !(c.is_alphanumeric() || c == '_'))
+        .split(|c: char| !is_name_char(c))
         .next()
         .unwrap_or_default();
     if name.is_empty() {
