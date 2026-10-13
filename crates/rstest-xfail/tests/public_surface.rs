@@ -12,6 +12,7 @@
 mod support;
 
 use eyre::Result;
+use pretty_assertions::assert_eq;
 use rstest_xfail::xfail;
 use support::{exported_paths, facade_source};
 
@@ -190,6 +191,156 @@ fn an_unimplemented_syntax_item_is_reported() {
     assert!(
         reported.contains("could not interpret"),
         "the error must say the item was uninterpretable, got: {reported}"
+    );
+}
+
+mod model {
+    //! A handwritten model of what a `cfg` predicate implies, used as the
+    //! oracle for the surface enumeration below.
+    //!
+    //! It answers one question — whether a predicate can still hold once `test`
+    //! is disabled — by interpreting a small syntax tree. The model is
+    //! deliberately its own tiny interpreter rather than a call into the
+    //! derivation: an oracle that shares the implementation under test cannot
+    //! disagree with it, and so cannot find anything.
+
+    /// What a predicate means once `test` is disabled, mirroring the
+    /// derivation's `Outcomes` shape: whether it can hold, and whether it can
+    /// fail.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub struct Meaning {
+        /// The predicate can hold with `test` disabled.
+        pub can_hold: bool,
+        /// The predicate can fail with `test` disabled.
+        pub can_fail: bool,
+    }
+
+    /// A predicate this model understands, as a syntax tree.
+    ///
+    /// `Test` is the one atom with a known meaning; `Other` stands for
+    /// anything the model cannot resolve, such as `unix`.
+    #[derive(Clone, Debug)]
+    pub enum Pred {
+        /// The `test` atom, which is false whenever `test` is disabled.
+        Test,
+        /// An atom settled by the target or the build flags.
+        Other,
+        /// `all(..)`: holds only if every operand can hold.
+        All(Vec<Self>),
+        /// `any(..)`: holds if at least one operand can hold.
+        Any(Vec<Self>),
+        /// `not(..)`: swaps the operand's two outcomes.
+        Not(Box<Self>),
+        /// A combinator the model does not know, such as `version(..)`.
+        Unknown,
+    }
+
+    /// Reports the meaning of a predicate, independent of the derivation.
+    pub fn meaning(pred: &Pred) -> Meaning {
+        match pred {
+            Pred::Test => Meaning {
+                can_hold: false,
+                can_fail: true,
+            },
+            Pred::Other | Pred::Unknown => Meaning {
+                can_hold: true,
+                can_fail: true,
+            },
+            Pred::All(operands) => Meaning {
+                can_hold: operands.iter().all(|p| meaning(p).can_hold),
+                can_fail: operands.iter().any(|p| meaning(p).can_fail),
+            },
+            Pred::Any(operands) => Meaning {
+                can_hold: operands.iter().any(|p| meaning(p).can_hold),
+                can_fail: operands.iter().all(|p| meaning(p).can_fail),
+            },
+            Pred::Not(operand) => {
+                let negated = meaning(operand);
+                Meaning {
+                    can_hold: negated.can_fail,
+                    can_fail: negated.can_hold,
+                }
+            }
+        }
+    }
+
+    /// Renders a predicate as the Rust source the derivation will parse.
+    pub fn source(pred: &Pred) -> String {
+        match pred {
+            Pred::Test => "test".to_owned(),
+            Pred::Other => "unix".to_owned(),
+            Pred::Unknown => "version(\"1.85\")".to_owned(),
+            Pred::All(operands) => format!("all({})", join(operands)),
+            Pred::Any(operands) => format!("any({})", join(operands)),
+            Pred::Not(inner) => format!("not({})", source(inner)),
+        }
+    }
+
+    /// Joins operand renderings with the separator a `cfg` list uses.
+    fn join(operands: &[Pred]) -> String {
+        operands.iter().map(source).collect::<Vec<_>>().join(", ")
+    }
+}
+
+/// Enumerates every `cfg` predicate up to three nodes deep.
+///
+/// A bounded enumeration is the stronger form of the property test a generator
+/// would sample: the derivation decides whether an item is test-only by asking
+/// whether its predicate can still hold with `test` disabled, and every
+/// predicate in that bounded space is checked rather than a sample of them. The
+/// space is small because the atoms are only `test` and one the oracle cannot
+/// resolve, and the combinators are three.
+fn predicates_to_depth(remaining: u32) -> Vec<model::Pred> {
+    use model::Pred;
+    let mut all = vec![Pred::Test, Pred::Other, Pred::Unknown];
+    if remaining == 0 {
+        return all;
+    }
+    let inner = predicates_to_depth(remaining - 1);
+    for operand in &inner {
+        all.push(Pred::Not(Box::new(operand.clone())));
+    }
+    // `all` and `any` with one and two operands. Three operands add nothing
+    // that nesting two does not already reach at this depth.
+    for first in &inner {
+        all.push(Pred::All(vec![first.clone()]));
+        all.push(Pred::Any(vec![first.clone()]));
+        for second in &inner {
+            all.push(Pred::All(vec![first.clone(), second.clone()]));
+            all.push(Pred::Any(vec![first.clone(), second.clone()]));
+        }
+    }
+    all
+}
+
+/// The derivation agrees with an independent model over every bounded
+/// predicate, including the forms an occurrence check gets wrong.
+///
+/// Two facts are asserted per predicate. First, whether the export survives is
+/// exactly whether the model says the predicate can hold with `test` disabled —
+/// this is the whole contract, and it is what a `cfg` occurrence check broke
+/// for `not(test)` and `any(test, unix)`. Second, the derivation terminates
+/// rather than erroring, so an unrecognised combinator or an unparsable
+/// predicate is retained as surface rather than reported as a failure.
+#[test]
+fn the_cfg_derivation_agrees_with_the_model_over_every_bounded_predicate() {
+    let mut checked = 0_u32;
+    for predicate in predicates_to_depth(2) {
+        let rendered = model::source(&predicate);
+        let source = format!("#[cfg({rendered})]\npub fn export() {{}}\n");
+        let derived = exported_paths(&source)
+            .unwrap_or_else(|error| panic!("`{rendered}` must derive, got: {error}"));
+        let expected_hold = model::meaning(&predicate).can_hold;
+        let is_surface = derived.contains(&"rstest_xfail::export".to_owned());
+        assert_eq!(
+            is_surface, expected_hold,
+            "`{rendered}`: surface={is_surface}, model can_hold={expected_hold}"
+        );
+        checked += 1;
+    }
+    assert!(
+        checked > 100,
+        "the enumeration must be broad, got {checked}"
     );
 }
 

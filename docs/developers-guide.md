@@ -52,6 +52,29 @@ second time and was removed. The crate declares no features, so `make test`'s
 `tests/workflow_contracts/suite_runs_once_test.py` holds the split, reading
 commands through `tests/workflow_contracts/suite_commands.py`.
 
+### Build targets
+
+`make build` and `make release` build the facade's library artefact through one
+pattern rule, `target/%/$(TARGET)`. `TARGET` defaults to
+`librstest_xfail.rlib`, so the artefacts are
+`target/debug/librstest_xfail.rlib` and `target/release/librstest_xfail.rlib`.
+The underscore matters: Cargo maps the hyphen in the `rstest-xfail` package
+name to `_` in the artefact file name, and a `TARGET` that kept the hyphen
+would name a file Cargo never writes.
+
+The rule's only prerequisite is `FORCE`, and `FORCE` is declared phony. This is
+what gives Cargo the freshness decision rather than Make. Without
+`.PHONY: FORCE`, Make compares the timestamp of a file named `FORCE` against
+the artefact's; an artefact that happens to be newer makes the target look up
+to date and the recipe never runs, so the build silently stops happening.
+Marking the *prerequisite* phony is safe — only marking the artefact itself
+phony would break the implicit pattern match.
+
+Both properties are pinned by
+`tests/workflow_contracts/build_artefacts_test.py`, which runs the real recipes
+against a scratch copy of the Makefile with a fake `cargo` on `PATH`, so a
+regression fails there rather than being re-read.
+
 ## Tooling
 
 Development builds use Cranelift for debug code generation. Every `rustflags`

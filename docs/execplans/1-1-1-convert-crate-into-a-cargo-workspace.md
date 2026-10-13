@@ -937,8 +937,11 @@ These deferrals are deliberate scoping, not omissions.
   Given/When/Then; the `cargo metadata` end-to-end test is the correct
   observable check. Revisit when `#[xfail]` produces user-visible outcomes
   (2.x).
-- `proptest` — deferred. A fixed three-member set has no input domain over
-  which a property holds.
+- `proptest` — deferred as a dependency. A fixed three-member set has no input
+  domain over which a property holds. The one recursive unit in this PR, the
+  `cfg` evaluator, is covered by bounded exhaustive enumeration instead — see
+  the sixth-round entry under "Post-review revisions" for why enumeration beats
+  sampling on a space that small.
 - `kani` — deferred. There is no `unsafe` code or state machine to model-check;
   the contract is enforced by Cargo's resolver and rustc's import resolution.
 - `verus` — deferred. There is no function or lemma to prove; a proof here
@@ -1181,6 +1184,10 @@ these revisions are carried by pull request #112.
      setup kills 4, the two additions being
      `test_a_stale_force_file_cannot_suppress_a_rebuild[release-release]` and
      `test_the_recipes_invoke_cargo_build[release]`.
+     (A later round removed `test_the_recipes_invoke_cargo_build` as a
+     duplicate of the stale-`FORCE` test, so the current suite has three
+     cases there rather than four. The count above is what that round
+     measured, and is left as the record of it.)
 
 That round also asked for two follow-up issues, and verified that none existed
 (the repository had no issues at all, open or closed). Both are now filed:
@@ -1308,3 +1315,106 @@ That round also asked for two follow-up issues, and verified that none existed
   count is 22 across the three facade test binaries (12 surface cases including
   the two new `cfg` regressions, 9 metadata and workspace cases, and the macro
   pass-through probe).
+
+**Sixth round (current-head review, `3231ae6` → `d5d33fc`).** The review pause
+was cleared and CodeRabbit submitted a fresh review at `3231ae6`
+(`5500500111`), which raised two inline findings and one outside-diff finding.
+All three were verified against the source and repaired; the count is now 24
+facade tests (14 surface cases) and 91 workflow-contract cases.
+
+1. **`check_macro` accepted an item-position invocation.** `syn` nests two
+   forms under `Item::Macro`, and `ItemMacro::ident` is `Option<Ident>`: it is
+   `Some` only for a `macro_rules!` definition. An invocation such as
+   `reexports!();` parses to `ident: None`, so the function returned `Ok(())`
+   for a form whose tokens the compiler expands — possibly into public items
+   the source-level walk never reads. That is a fail-open hole in a derivation
+   whose other arms deliberately fail closed, so it is now reported.
+   `an_item_position_macro_invocation_is_reported` pins it.
+2. **`test_the_recipes_invoke_cargo_build` was a duplicate.** Both of its
+   parametrizations resolved to the same goal/profile/expected triples that
+   `test_a_stale_force_file_cannot_suppress_a_rebuild` already covered, and
+   both asserted membership of the same expected invocation in the same
+   `_invocations` output. It added a second run of the recipes and no claim.
+   Removed; the surviving test's docstring now states the recipe contract it
+   carries, so the intent is not left to be inferred from a removal. The
+   workflow-contract count therefore falls from 93 to 91.
+3. **The D1 invariant contradicted the delivered workspace.** The invariant
+   required `rstest-xfail` to depend on both siblings, while a later entry
+   recorded that the facade-to-core edge was deliberately dropped: the core
+   exposes no public items at 1.1.1, so the edge would be one no target could
+   use and Cargo reports it as an unused dependency. The invariant now gives
+   the permitted direction and records the edge as arriving with the core
+   vocabulary at 1.2.x, keeping D1's force (the core is a pure leaf; no edge
+   points at the facade) without asserting a dependency the workspace does not
+   have.
+
+The same review moved the pre-merge checks from **2 errors and 2 warnings** to
+**0 errors and 4 warnings**. The two errors — the Makefile contract test and the
+`cargo metadata` error paths — are cleared. The four remaining warnings are
+dispositions rather than repairs, recorded here so the reasoning is not
+re-derived:
+
+- *User-Facing Documentation* asks for a `0.2.0` migration document. The crate
+  is **not published**: `crates.io` reports `rstest-xfail` does not exist, and
+  the repository has no release. There is no released layout for a migration
+  guide to migrate *from*, and the removed `greet` API existed only in the
+  disposable stub the roadmap replaced.
+- *Testing (Compile-Time / Ui)* asks for `trybuild`. The roadmap already places
+  that work at 2.1.1, 2.2.1, and 5.1.2, and it is filed as issue #113. The
+  placeholder `#[xfail]` parses nothing, so there are no diagnostics to assert
+  on yet; the fixtures arrive with the parsing that produces them.
+- *Testing (Property / Proof)* asks for a `proptest` model of the recursive
+  `cfg` evaluator. The evaluator is new in this PR, so the applicability note
+  above was written before it existed and was stale for it. Addressed by
+  enumeration rather than sampling:
+  `the_cfg_derivation_agrees_with_the_model_over_every_bounded_predicate`
+  builds every predicate up to three nodes deep over the atoms `test`, a
+  target-settled atom, and an unknown combinator, and asserts two facts against
+  an independent model — that an export survives exactly when the model says
+  the predicate can hold with `test` disabled, and that derivation terminates
+  rather than erroring. That is **1,893 predicates, enumerated exhaustively**,
+  which is the stronger form of the property the reviewer proposed: a generator
+  would sample this space, not cover it. The model is a separate small
+  interpreter rather than a call into the derivation, because an oracle that
+  shares the implementation under test cannot disagree with it.
+
+  This was mutation-checked. With `combine`'s `not` arm changed to stop
+  negating its operand, the suite fails twice: once on the round-5 regression
+  case `a_negated_test_predicate_is_surface`, and once on the enumeration,
+  which reports the specific predicate at fault. The control tree passes 24/24.
+
+  `proptest` remains deferred as a dependency. The bounded space here is small
+  and fixed, so exhaustive enumeration leaves it nothing to add, and AGENTS.md
+  asks for a property test only where an invariant holds over a broad input
+  space. If the evaluator later grows — `target_os` values, feature atoms, the
+  full `cfg` grammar — the generator becomes worthwhile and this test is where
+  it would attach.
+- *Developer Documentation* asks for a build-workflow subsection covering
+  `make build` and `make release`, the artefact path, and the `FORCE`
+  rationale. Repaired rather than deferred: AGENTS.md places internally facing
+  conventions in the developers' guide, and the knowledge lived only in the
+  Makefile's comments, the test module docstring, and the reviewers' heads.
+  `docs/developers-guide.md` now has a "Build targets" subsection recording the
+  pattern rule, `TARGET` and the hyphen-to-underscore mapping, the two artefact
+  paths, why `FORCE` is phony, and which test pins both properties.
+
+### Verification of the sixth round
+
+`make build` and `make release` were exercised directly, not only through the
+contract test, and the enumeration's kill was confirmed by mutation:
+
+- The `cfg` enumeration was mutation-checked. Changing `combine`'s `not` arm to
+  stop negating its operand fails the suite twice — once on the round-5
+  regression case and once on the enumeration, which names the offending
+  predicate. The control tree passes 24/24. **The mutant is killed.**
+- The enumeration covers **1,893 predicates**, counted independently of the
+  generator loop, so the breadth assertion is not self-certifying.
+- The focused facade suite passes 24/24, across the three test binaries, on
+  both the control tree and (as the kill expects) fails 22/24 under the mutant.
+- The full eight-gate run had passed on the tree as of the round-6 repair
+  commit `d5d33fc` — `check-fmt`, `lint` (all three recipe lines), `typecheck`,
+  `test`, `test-workflow-contracts` (91 cases), `markdownlint`, `nixie`, and
+  `spelling`. The enumeration, developers'-guide subsection, and the execplan
+  edit above were made *after* that commit, so those results do not cover them;
+  the gates are re-run on the final tree before the round-7 commit, and the
+  round-7 entry records the outcome.
