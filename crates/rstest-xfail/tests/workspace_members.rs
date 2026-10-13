@@ -67,11 +67,27 @@ fn metadata_from(program: &str) -> eyre::Result<serde_json::Value> {
         .wrap_err_with(|| {
             format!("failed to run `{program} metadata --no-deps --offline --format-version 1`")
         })?;
+    interpret_output(program, &output)
+}
+
+/// Turns a finished `cargo metadata` process into a parsed document.
+///
+/// Split from [`metadata_from`] so the unsuccessful-exit branch is reachable
+/// without spawning anything: the status and the captured streams are the
+/// only inputs, so a test can hand this an exit code and some bytes.
+///
+/// The diagnostic names the program, its exit status, and the captured
+/// standard error, because a bare `ExitStatus` leaves the reader to guess
+/// which command failed and why.
+fn interpret_output(
+    program: &str,
+    output: &std::process::Output,
+) -> eyre::Result<serde_json::Value> {
     if !output.status.success() {
         return Err(eyre!(
             "`{program} metadata` exited with {}: {}",
             output.status,
-            String::from_utf8_lossy(&output.stderr)
+            String::from_utf8_lossy(&output.stderr).trim()
         ));
     }
     parse_metadata(&output.stdout)
@@ -222,9 +238,10 @@ const NO_SUCH_PROGRAM: &str = "rstest-xfail-no-such-program";
 
 /// Pins the spawn-failure branch of [`metadata_from`].
 ///
-/// The reported error must name the stage — running the command — rather than
-/// surfacing a bare `std::io::Error`. No `file_serial`: the spawn fails before
-/// any Cargo process starts, so there is no package-cache lock to contend for.
+/// The reported error must name the stage — running the command — and the
+/// command itself, rather than surfacing a bare `std::io::Error`. No
+/// `file_serial`: the spawn fails before any Cargo process starts, so there is
+/// no package-cache lock to contend for.
 #[test]
 fn metadata_command_failure_names_the_command() {
     let message = metadata_from(NO_SUCH_PROGRAM)
@@ -233,6 +250,47 @@ fn metadata_command_failure_names_the_command() {
     assert!(
         message.contains("failed to run"),
         "the error must name the failing stage, got: {message}"
+    );
+    assert!(
+        message.contains(NO_SUCH_PROGRAM),
+        "the error must name the command that could not run, got: {message}"
+    );
+}
+
+/// Pins the unsuccessful-exit branch of [`interpret_output`].
+///
+/// A spawned `cargo metadata` that exits non-zero is a real failure mode — a
+/// bad manifest, a missing package, a registry error — and it is not the same
+/// as a spawn that never started or a document that will not parse. The
+/// synthetic status and streams keep this a pure test: no process runs.
+///
+/// The exit status is built through `ExitStatusExt`, which is Unix-only, and
+/// the repository builds on Linux exclusively (`.github/workflows/ci.yml`
+/// pins `runs-on: ubuntu-latest`; there is no other `cfg(unix)` guard in the
+/// tree).
+#[test]
+fn metadata_nonzero_exit_reports_status_and_stderr() {
+    use std::os::unix::process::ExitStatusExt;
+
+    let failed = std::process::Output {
+        status: std::process::ExitStatus::from_raw(256),
+        stdout: Vec::new(),
+        stderr: b"error: no such package".to_vec(),
+    };
+    let message = interpret_output("cargo", &failed)
+        .expect_err("a non-zero exit must fail rather than attempt a parse")
+        .to_string();
+    assert!(
+        message.contains("cargo"),
+        "the error must name the program, got: {message}"
+    );
+    assert!(
+        message.contains("error: no such package"),
+        "the error must carry the captured stderr, got: {message}"
+    );
+    assert!(
+        message.contains("exited with"),
+        "the error must report the unsuccessful exit, got: {message}"
     );
 }
 

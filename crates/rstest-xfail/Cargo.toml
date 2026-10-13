@@ -31,6 +31,11 @@ serial_test = { version = "4.0.1", features = ["file_locks"] }
 eyre = "0.6.14"
 cap-std = "4.0.3"
 camino = "1.2.6"
+# The public-surface oracle parses `src/lib.rs` into a `syn` item list instead
+# of scanning lines: a line scanner only recognises the forms it was written
+# for, so a valid declaration it does not expect — `pub` and `fn` on separate
+# lines, say — would add an export while leaving the derived set unchanged.
+syn = { version = "3.0.9", features = ["full"] }
 
 [lints]
 workspace = true

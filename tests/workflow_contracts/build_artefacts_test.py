@@ -67,19 +67,25 @@ def _database(*goals: str) -> str:
     return result.stdout
 
 
-def _invocations(tmp_path: Path, *goals: str) -> list[str]:
+def _invocations(tmp_path: Path, *goals: str, profile: str = "debug") -> list[str]:
     """Run goals against a scratch Makefile and return the calls to cargo.
 
-    The scratch directory pre-creates the artefact and an *older* file named
-    ``FORCE``, which is the arrangement that catches a prerequisite Make can
-    satisfy from the filesystem.
+    The scratch directory pre-creates the artefact for ``profile`` and an
+    *older* file named ``FORCE``, which is the arrangement that catches a
+    prerequisite Make can satisfy from the filesystem.
+
+    ``profile`` matters: each recipe's re-run decision is made against its own
+    directory, so a release scenario set up with only a debug artefact would
+    exercise a *missing* release artefact — where Make rebuilds because there
+    is nothing to find — rather than an *existing* one that a stale ``FORCE``
+    is wrongly allowed to satisfy. Both profiles must pre-create their own.
     """
     fake_cargo = tmp_path / "fake-cargo"
     fake_cargo.write_text(FAKE_CARGO, encoding="utf-8")
     fake_cargo.chmod(0o755)
     (tmp_path / "Makefile").write_text(MAKEFILE.read_text("utf-8"), encoding="utf-8")
 
-    artefact = tmp_path / "target" / "debug" / _facade_artefact()
+    artefact = tmp_path / "target" / profile / _facade_artefact()
     artefact.parent.mkdir(parents=True)
     artefact.touch()
     stale_force = tmp_path / FORCE
@@ -119,16 +125,27 @@ def test_the_artefact_rule_is_forced(profile: str) -> None:
     assert _prerequisites(_database(artefact), artefact) == [FORCE]
 
 
-def test_a_stale_force_file_cannot_suppress_a_rebuild(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("goal", "profile", "expected"),
+    [("build", "debug", "build"), ("release", "release", "build --release")],
+)
+def test_a_stale_force_file_cannot_suppress_a_rebuild(
+    tmp_path: Path, goal: str, profile: str, expected: str
+) -> None:
     """An older ``FORCE`` file must not satisfy the prerequisite.
 
     Without ``.PHONY: FORCE``, Make compares that file's timestamp with the
     artefact's. A stray file named ``FORCE`` that is older than an existing
     artefact makes the target look up to date, and the recipe never runs.
+
+    Both profiles are exercised: each builds into its own directory, so a
+    release scenario that pre-created only the debug artefact would rebuild
+    because the release artefact is *missing*, which passes against the mutant
+    and proves nothing.
     """
-    invocations = _invocations(tmp_path, "build")
-    assert any(call.split()[:1] == ["build"] for call in invocations), (
-        f"a stale FORCE file suppressed the rebuild; cargo was called with {invocations}"
+    invocations = [call.split() for call in _invocations(tmp_path, goal, profile=profile)]
+    assert expected.split() in invocations, (
+        f"a stale FORCE file suppressed the {goal} rebuild; cargo was called with {invocations}"
     )
 
 
@@ -139,7 +156,8 @@ def test_the_recipes_invoke_cargo_build(
     tmp_path: Path, goal: str, expected: str
 ) -> None:
     """The profile flag reaches Cargo, so each goal builds the profile it names."""
-    invocations = [call.split() for call in _invocations(tmp_path, goal)]
+    profile = "release" if goal == "release" else "debug"
+    invocations = [call.split() for call in _invocations(tmp_path, goal, profile=profile)]
     assert expected.split() in invocations, (
         f"`make {goal}` did not run `cargo {expected}`; it ran {invocations}"
     )

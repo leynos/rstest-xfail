@@ -801,6 +801,15 @@ parse step makes the second pure. Neither test spawns a competing `cargo`, so
 neither needs `file_serial`; the spawn-failure test's program never starts a
 process at all.
 
+The unsuccessful-exit branch is reached the same way.
+`interpret_output(program, &output)` takes a finished process's status and
+captured streams, so a test can hand it `ExitStatus::from_raw(256)` and some
+bytes, and assert that the reported error names the program, the exit status,
+and the captured standard error — without spawning anything. `ExitStatusExt` is
+Unix-only, which is sound for this repository: CI pins `runs-on: ubuntu-latest`
+and no other `cfg(unix)` guard exists in the tree. The suite is nine tests,
+three of them pinning the three failure branches.
+
 The matchers are imported narrowly (`contains`, `eq`, `empty`, `assert_that`,
 and `GoogleTestSupport`) rather than via `use googletest::prelude::*`, because
 the glob brings a single-parameter `Result` alias into scope that would clash
@@ -819,6 +828,37 @@ before snapshotting the derived value, so an unintended export fails instead of
 being mirrored into the expectation. The Stage D sketch below hard-coded the
 snapshot input and could not detect one; it is retained here only to show the
 shape the test grew from.
+
+The derivation parses the source with `syn` rather than scanning lines. A line
+scanner keyed on the literal prefixes `pub use` and `pub` only sees the forms
+it was written to expect, so a valid declaration it does not recognize — a
+`pub` separated from its `fn` by a newline, say — adds an export while leaving
+the derived set unchanged. That is fail-open in exactly the way the
+derived-surface design forbids, so the scanner was replaced by an item walk:
+
+- A `use` tree is walked to its leaves. A glob is reported rather than skipped,
+  because it cannot be attributed to a name and silently ignoring it is the
+  shrink the test exists to prevent.
+- A restricted visibility (`pub(crate)`, `pub(super)`) is not public surface,
+  and a `#[cfg(test)]` item is compiled out of the published library, so
+  neither is recorded. The `cfg` predicate is walked as a parsed `Meta`, so
+  nested forms such as `#[cfg(all(test, unix))]` are recognized rather than
+  pattern-matched on their text.
+- An `impl` block exposing a public associated item is reported: this test
+  names items by their own identifier and cannot express a `Type::method` path,
+  so recording only the type would under-report.
+- `Item::Verbatim` — `syn`'s escape hatch for tokens it will not interpret, and
+  where a `macro` 2.0 declaration lands — is reported rather than skipped.
+
+The closed keyword set is deliberate: an item form the walker cannot classify
+is an error, so a future syntax change fails the test loudly instead of quietly
+narrowing what it watches. `syn = { version = "3.0.9", features = ["full"] }`
+joins the facade's dev-dependencies for this; it resolves from the local
+registry cache, so the `--offline` metadata tests still hold.
+
+Ten tests carry it: the equality assertion, plus named cases for a split
+visibility, an ordinary added export, a renamed re-export, a braced group, a
+glob, a test-only item, a restricted visibility, and an uninterpretable item.
 
 ```rust
 //! Documents the facade's public surface for roadmap task 1.1.1.
@@ -1105,6 +1145,38 @@ these revisions are carried by pull request #112.
   succeed, and non-JSON bytes), each asserting the error names the failing
   stage. Mutation-checked by reverting the parse `wrap_err` to a bare
   `map_err`, which fails exactly the parse-stage test.
+- A third review round found the unsuccessful *exit* branch still untested,
+  along with two other gaps; all three were repaired:
+  1. `interpret_output(program, &output)` takes a finished process's status and
+     streams, so `metadata_nonzero_exit_reports_status_and_stderr` can hand it
+     `ExitStatus::from_raw(256)` and assert the error names the program, the
+     exit status, and the captured stderr. The spawn-failure assertion was
+     strengthened to require the program name, not just the stage phrase.
+  2. The public-surface derivation moved from a line scanner to a `syn` item
+     walk — see "The facade public-surface test" above — because a line scanner
+     misses valid declarations it does not expect. Nine named regression cases
+     pin the forms, including the split `pub`/`fn` the scanner let through.
+  3. The workflow contract's scratch setup is parameterized by profile. The
+     release scenario previously pre-created only the debug artefact, so it
+     rebuilt because the release artefact was *missing* rather than because a
+     stale `FORCE` file failed to satisfy the prerequisite. Measured: with
+     `.PHONY: FORCE` removed, the pre-fix setup kills 2 tests and the current
+     setup kills 4, the two additions being
+     `test_a_stale_force_file_cannot_suppress_a_rebuild[release-release]` and
+     `test_the_recipes_invoke_cargo_build[release]`.
+
+That round also asked for two follow-up issues, and verified that none existed
+(the repository had no issues at all, open or closed). Both are now filed:
+
+- [#113](https://github.com/leynos/rstest-xfail/issues/113) — implement the
+  macro UI (`trybuild`) coverage the roadmap specifies for 2.1.1, 2.2.1, and
+  5.1.2. The placeholder `#[xfail]` parses nothing, so it has no diagnostics to
+  assert on; the fixtures arrive with the parsing that produces them.
+- [#114](https://github.com/leynos/rstest-xfail/issues/114) — establish a
+  compiled public-API and SemVer oracle before publishing. This is risk R2's
+  deferral made concrete: the source-derived surface test reads `src/lib.rs`
+  and so cannot see macro-generated public items or the resolved API a
+  downstream crate observes.
 - The `rstest` parameterized cases carry a serialization attribute, matching
   the module's stated serialization guarantee. (That attribute is
   `file_serial`; see the formal-review entry below.)
