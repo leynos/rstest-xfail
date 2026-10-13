@@ -1375,7 +1375,7 @@ re-derived:
   rather than erroring. That is **1,893 predicates, enumerated exhaustively**,
   which is the stronger form of the property the reviewer proposed: a generator
   would sample this space, not cover it. The model is a separate small
-  interpreter rather than a call into the derivation, because an oracle that
+  interpreter rather than a call into the derivation because an oracle that
   shares the implementation under test cannot disagree with it.
 
   This was mutation-checked. With `combine`'s `not` arm changed to stop
@@ -1387,7 +1387,7 @@ re-derived:
   and fixed, so exhaustive enumeration leaves it nothing to add, and AGENTS.md
   asks for a property test only where an invariant holds over a broad input
   space. If the evaluator later grows — `target_os` values, feature atoms, the
-  full `cfg` grammar — the generator becomes worthwhile and this test is where
+  full `cfg` grammar — the generator becomes worthwhile, and this test is where
   it would attach.
 - *Developer Documentation* asks for a build-workflow subsection covering
   `make build` and `make release`, the artefact path, and the `FORCE`
