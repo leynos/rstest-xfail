@@ -839,11 +839,17 @@ derived-surface design forbids, so the scanner was replaced by an item walk:
 - A `use` tree is walked to its leaves. A glob is reported rather than skipped,
   because it cannot be attributed to a name and silently ignoring it is the
   shrink the test exists to prevent.
-- A restricted visibility (`pub(crate)`, `pub(super)`) is not public surface,
-  and a `#[cfg(test)]` item is compiled out of the published library, so
-  neither is recorded. The `cfg` predicate is walked as a parsed `Meta`, so
-  nested forms such as `#[cfg(all(test, unix))]` are recognized rather than
-  pattern-matched on their text.
+- A restricted visibility (`pub(crate)`, `pub(super)`) is not public surface.
+- A `#[cfg(test)]` item is compiled out of the published library, so it is not
+  recorded either — but the test for that is whether the predicate *requires*
+  `test`, not whether it mentions it. The predicate is evaluated to a pair of
+  outcomes (can it hold, can it fail) once `test` is disabled, and only a
+  predicate that cannot hold excludes the item. `#[cfg(not(test))]` and
+  `#[cfg(any(test, unix))]` mention `test` and are compiled into a normal
+  build, so both are surface; `#[cfg(test)]` and `#[cfg(all(test, unix))]` are
+  not. Atoms the oracle cannot resolve, such as `unix`, count as either
+  outcome, which keeps an uncertain export rather than dropping it. See the
+  fourth-round entry below for the defect this replaced.
 - An `impl` block exposing a public associated item is reported: this test
   names items by their own identifier and cannot express a `Type::method` path,
   so recording only the type would under-report.
@@ -856,9 +862,16 @@ narrowing what it watches. `syn = { version = "3.0.9", features = ["full"] }`
 joins the facade's dev-dependencies for this; it resolves from the local
 registry cache, so the `--offline` metadata tests still hold.
 
-Ten tests carry it: the equality assertion, plus named cases for a split
+Twelve tests carry it: the equality assertion, plus named cases for a split
 visibility, an ordinary added export, a renamed re-export, a braced group, a
-glob, a test-only item, a restricted visibility, and an uninterpretable item.
+glob, a test-only item (`cfg(test)`), a conjunction that requires `test`
+(`cfg(all(test, unix))`), a negated predicate (`cfg(not(test))`), a disjunction
+that does not require `test` (`cfg(any(test, unix))`), a restricted visibility,
+and an uninterpretable item.
+
+The derivation itself lives in `crates/rstest-xfail/tests/support/mod.rs`: it
+outgrew the 400-line file limit, and `cargo` treats every top-level file in
+`tests/` as its own test binary, so shared test code belongs in a subdirectory.
 
 ```rust
 //! Documents the facade's public surface for roadmap task 1.1.1.
@@ -900,7 +913,8 @@ fn placeholder_macro_passes_body_through() {
 `facade_source()` reads the crate source through `cap_std::fs::Dir` and
 `camino::Utf8Path` rather than `std::fs`, which is what the whitaker
 `no_std_fs_operations` lint requires (see `Surprises & discoveries`); the full
-source of the derivation helpers lives in the file itself.
+source of the derivation helpers lives in `tests/support/mod.rs`, whose module
+comment carries the design rationale.
 
 Generate the snapshot once with
 `INSTA_UPDATE=always cargo test -p rstest-xfail --test public_surface` (or
@@ -1246,3 +1260,48 @@ That round also asked for two follow-up issues, and verified that none existed
   member crates and their placeholder status, and the deferral note above
   records the corrected reasoning. The finding was valid; the plan's stated
   reason for skipping the file was not.
+- A fourth review round accepted the three repairs above and found two defects
+  left in them. Both were real, and both were repaired rather than argued.
+  1. **The `cfg` handling asked whether a predicate *mentions* `test`, not
+     whether it *requires* `test`.** `mentions_test` matched any nested
+     occurrence, so `is_test_only` dropped an item whose predicate mentioned
+     `test` anywhere. `#[cfg(not(test))]` and `#[cfg(any(test, unix))]` both
+     mention `test` and both exist in a normal build: the oracle would have
+     hidden either export while the equality assertion still reported the
+     intended surface. The predicate is now evaluated to a pair of outcomes —
+     can it hold, and can it fail, once `test` is disabled — and an item is
+     test-only only when its predicate *cannot hold*. Unresolvable atoms such
+     as `unix` count as either outcome, so the derivation keeps an export it
+     is unsure about instead of dropping it; that is the fail-closed
+     direction, because a false exclusion shrinks the watched surface silently
+     while a false retention only makes the equality assertion noisier. The
+     four combinators `all`, `any`, `not`, and a bare `test` are evaluated;
+     anything else, including a predicate that will not parse, is uncertain.
+  2. **The unsuccessful-exit test did not assert the status value.** It
+     checked for the phrase `exited with` but not for the code the
+     implementation interpolates, so the diagnostic could have stopped
+     carrying the exit status — the one detail that identifies which failure
+     occurred — and the test would still have passed. It now asserts the
+     constructed `ExitStatus` value as well.
+- Both repairs were mutation-checked, each mutant confirmed to differ from the
+  control before its run, with the failure mode inspected rather than assumed:
+
+  | Mutant                                                        | Expected failure                          | Result |
+  | :------------------------------------------------------------ | :---------------------------------------- | :----- |
+  | occurrence semantics restored (`can_fail` for `can_hold`)     | `not`/`any` cases retain the export       | KILLED |
+  | `any` given `all` semantics                                   | `any(test, unix)` case retains the export | KILLED |
+  | `not` no longer negates                                       | `not(test)` case retains the export       | KILLED |
+  | diagnostic interpolates a constant instead of `output.status` | exit-status assertion                     | KILLED |
+
+  The last mutant is recorded deliberately: its first form changed the `eyre!`
+  argument count and so failed to *compile*, which is not a kill. It was
+  rewritten with the same arity, and the recorded run is that one — a mutant
+  that does not build proves nothing about the test.
+- The derivation then outgrew the 400-line file limit, so it moved to
+  `crates/rstest-xfail/tests/support/mod.rs` and `public_surface.rs` kept the
+  contract and its cases. This also matches the plan's own "group by feature"
+  rule: `cargo` treats every top-level file in `tests/` as a test binary, so
+  shared test code belongs in a subdirectory rather than a sibling. The test
+  count is 22 across the three facade test binaries (12 surface cases including
+  the two new `cfg` regressions, 9 metadata and workspace cases, and the macro
+  pass-through probe).

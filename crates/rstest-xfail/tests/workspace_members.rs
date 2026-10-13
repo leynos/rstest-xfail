@@ -292,6 +292,14 @@ fn metadata_nonzero_exit_reports_status_and_stderr() {
         message.contains("exited with"),
         "the error must report the unsuccessful exit, got: {message}"
     );
+    // The status *value* must reach the reader, not just the phrase introducing
+    // it. Without this, the diagnostic could stop carrying the exit code — the
+    // one detail that says which failure this was — and the test would still
+    // pass.
+    assert!(
+        message.contains(&failed.status.to_string()),
+        "the error must carry the exit status value, got: {message}"
+    );
 }
 
 /// Pins the parse-failure branch of [`metadata_from`].
