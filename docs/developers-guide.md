@@ -14,6 +14,26 @@ sequence.
 
 ## Local Workflow
 
+### Workspace layout
+
+The repository is a Cargo workspace with three member crates under `crates/`:
+
+- `rstest-xfail-core` — the pure domain core. It must never depend on the
+  sibling crates or on procedural-macro tooling (constraint D1).
+- `rstest-xfail-macros` — the procedural-macro crate implementing `#[xfail]`.
+- `rstest-xfail` — the facade that re-exports the public surface for users.
+
+`cargo` operates across all members by default. Target one crate with
+`-p <crate>` (for example `cargo test -p rstest-xfail`). Lint and dependency
+policy are inherited from `[workspace.lints]` and `[workspace.dependencies]` in
+the virtual root manifest. Each member manifest opts in key by key rather than
+wholesale: `[lints] workspace = true` inherits the lint policy, and the package
+fields and dependencies that the workspace owns are written
+`version.workspace = true`, `edition.workspace = true`, and
+`rstest-xfail-macros.workspace = true`. Fields the member owns outright are
+written as ordinary keys, so a dependency or package field is inherited only
+where the member names it explicitly.
+
 Use `make all` as the public entrypoint for formatting, linting, and tests.
 `make lint` runs rustdoc, Clippy, and Whitaker. `make test` prefers
 `cargo nextest run` and falls back to `cargo test` when cargo-nextest is not
@@ -31,6 +51,29 @@ second time and was removed. The crate declares no features, so `make test`'s
 `--all-features` selects the same tests as the coverage run's default.
 `tests/workflow_contracts/suite_runs_once_test.py` holds the split, reading
 commands through `tests/workflow_contracts/suite_commands.py`.
+
+### Build targets
+
+`make build` and `make release` build the facade's library artefact through one
+pattern rule, `target/%/$(TARGET)`. `TARGET` defaults to
+`librstest_xfail.rlib`, so the artefacts are
+`target/debug/librstest_xfail.rlib` and `target/release/librstest_xfail.rlib`.
+The underscore matters: Cargo maps the hyphen in the `rstest-xfail` package
+name to `_` in the artefact file name, and a `TARGET` that kept the hyphen
+would name a file Cargo never writes.
+
+The rule's only prerequisite is `FORCE`, and `FORCE` is declared phony. This is
+what gives Cargo the freshness decision rather than Make. Without
+`.PHONY: FORCE`, Make compares the timestamp of a file named `FORCE` against
+the artefact's; an artefact that happens to be newer makes the target look up
+to date and the recipe never runs, so the build silently stops happening.
+Marking the *prerequisite* phony is safe — only marking the artefact itself
+phony would break the implicit pattern match.
+
+Both properties are pinned by
+`tests/workflow_contracts/build_artefacts_test.py`, which runs the real recipes
+against a scratch copy of the Makefile with a fake `cargo` on `PATH`, so a
+regression fails there rather than being re-read.
 
 ## Tooling
 

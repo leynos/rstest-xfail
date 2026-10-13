@@ -1,0 +1,41 @@
+[package]
+name = "rstest-xfail"
+description = "Expected failure macro attributes for rstest, async tests and rstest-bdd"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+# Only the macro crate is named here. A dependency on `rstest-xfail-core` is
+# deliberately absent until the facade re-exports core types (roadmap 1.2.x):
+# the core exposes no public items yet, so declaring the edge now would be a
+# dependency no target can use, which Cargo reports as `unused_dependencies`.
+rstest-xfail-macros.workspace = true
+
+[dev-dependencies]
+rstest = "0.26.1"
+googletest = "0.13"
+pretty_assertions = "1.4.1"
+insta = "1.48.0"
+serde_json = "1.0.151"
+# `file_locks` supplies `file_serial`, which the `cargo metadata` tests use in
+# place of plain `serial`: the gate runs `cargo nextest`, which gives each test
+# its own process, and an in-process lock cannot serialize across processes.
+serial_test = { version = "4.0.1", features = ["file_locks"] }
+# Failure context in the `cargo metadata` integration tests; `eyre` keeps the
+# stage that failed visible without threading a bespoke error type through.
+eyre = "0.6.14"
+cap-std = "4.0.3"
+camino = "1.2.6"
+# The public-surface oracle parses `src/lib.rs` into a `syn` item list instead
+# of scanning lines: a line scanner only recognises the forms it was written
+# for, so a valid declaration it does not expect — `pub` and `fn` on separate
+# lines, say — would add an export while leaving the derived set unchanged.
+syn = { version = "3.0.9", features = ["full"] }
+
+[lints]
+workspace = true

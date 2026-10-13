@@ -27,6 +27,9 @@ documentation set.
 - [ADR 001: Adopt the shared CV-005 contract library](adr-001-adopt-the-shared-cv005-contract-library.md)
   records the move from a local copy of the CV-005 contract to the pinned
   shared check.
+- [ADR 002: Cargo workspace and crate boundaries](adr-002-cargo-workspace-and-crate-boundaries.md)
+  records the decision to adopt a three-crate Cargo workspace under `crates/`
+  with a pure core.
 
 ## Rust reference material
 
@@ -53,3 +56,8 @@ documentation set.
   scripts.
 - [Whitaker user's guide](whitaker-users-guide.md) explains the df12
   Productions opinionated Rust lint suite and its project integration workflow.
+
+## Execution plans
+
+- [Convert the crate into a Cargo workspace (1.1.1)](execplans/1-1-1-convert-crate-into-a-cargo-workspace.md)
+  is the execution plan for roadmap task 1.1.1.

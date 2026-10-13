@@ -4,7 +4,9 @@
 SHELL := bash
 
 
-TARGET ?= librstest-xfail.rlib
+# `TARGET` names the facade's library artefact. The hyphenated crate name maps
+# to an underscored file name, so the artefact is `librstest_xfail.rlib`.
+TARGET ?= librstest_xfail.rlib
 
 CARGO ?= cargo
 BUILD_JOBS ?=
@@ -68,7 +70,25 @@ test: ## Run tests with warnings treated as errors
 	RUSTFLAGS="$(RUST_FLAGS) $(STANDARD_RUSTFLAGS)" $(CARGO) $(TEST_CMD) $(TEST_FLAGS) $(BUILD_JOBS)
 	RUSTFLAGS="$(RUST_FLAGS) $(STANDARD_RUSTFLAGS)" $(CARGO) test --doc --workspace --all-features
 
-target/%/$(TARGET): ## Build binary in debug or release mode
+# Cargo owns the freshness decision for the artefact, so `FORCE` makes the
+# rule always delegate to `cargo build` rather than letting Make compare
+# timestamps. Make would otherwise treat an existing artefact as up to date
+# forever, because the rule declares no source or manifest prerequisites, and
+# skip the rebuild.
+#
+# The prerequisite is a `FORCE` target rather than declaring the artefact
+# `.PHONY`. Marking it phony would suppress Make's implicit-rule search, and
+# this rule would then never match at all, because Make skips implicit rules
+# for phony targets. `build` and `release` would report "Nothing to be done".
+#
+# `FORCE` itself is declared phony, so a file that happens to be named `FORCE`
+# cannot satisfy the prerequisite and silently turn the rule back into a
+# timestamp comparison. Marking the prerequisite phony is safe; only marking
+# the artefact would break the implicit match.
+.PHONY: FORCE
+FORCE:
+
+target/%/$(TARGET): FORCE ## Build binary in debug or release mode
 	$(if $(findstring release,$(@)),$(RELEASE_RUSTFLAGS) )$(CARGO) build $(BUILD_JOBS) $(if $(findstring release,$(@)),--release)
 
 coverage: ## Generate lcov coverage with lld for llvm-tools compatibility

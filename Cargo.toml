@@ -1,18 +1,31 @@
-[package]
-name = "rstest-xfail"
+[workspace]
+resolver = "3"
+members = [
+    "crates/rstest-xfail-core",
+    "crates/rstest-xfail-macros",
+    "crates/rstest-xfail",
+]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
-description = "Expected failure macro attributes for rstest, async tests and rstest-bdd"
 license = "ISC"
+# `homepage` is deliberately absent: it would duplicate `repository`, which
+# Cargo warns about (`package.homepage` is redundant with `package.repository`).
 repository = "https://github.com/leynos/rstest-xfail"
-homepage = "https://github.com/leynos/rstest-xfail"
 readme = "README.md"
 keywords = ["rust", "testing", "macros", "unit-tests"]
 categories = ["development-tools"]
 
-[dependencies]
+[workspace.dependencies]
+# `rstest-xfail-core` is deliberately absent until a member depends on it. The
+# workspace declares a dependency here only once a member names it with
+# `<crate>.workspace = true`; an entry no member uses is reported by Cargo as an
+# unused workspace dependency. The core's entry arrives with the facade
+# re-exports in roadmap 1.2.x.
+rstest-xfail-macros = { path = "crates/rstest-xfail-macros", version = "0.1.0" }
 
-[lints.clippy]
+[workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }
 
 # 1. hygiene
@@ -74,8 +87,8 @@ missing_panics_doc                  = "deny"
 error_impl_error                    = "deny"
 result_large_err                    = "deny"
 
-[lints.rust]
+[workspace.lints.rust]
 missing_docs                        = "deny"
 
-[lints.rustdoc]
+[workspace.lints.rustdoc]
 missing_crate_level_docs            = "deny"
