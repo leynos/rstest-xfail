@@ -784,11 +784,22 @@ Apply this override only if validation fails; do not add it pre-emptively.
 The test file is committed at `crates/rstest-xfail/tests/workspace_members.rs`;
 it is the authoritative form and is not duplicated here. Its shape at 1.1.1 is:
 an `INTENDED_EDGES` table naming the one declared intra-workspace edge (the
-facade to the macros crate), a `workspace_metadata` helper that shells out to
-`cargo metadata` and returns `eyre::Result` with per-stage context, and four
-serialized tests: the member set matches exactly, the core declares no
-dependencies at all (D1), the declared edge set equals `INTENDED_EDGES`, and
-each intended member is present.
+facade to the macros crate), a metadata path split into
+`parse_metadata(stdout)` and `metadata_from(program)` — with
+`workspace_metadata()` supplying the resolved `CARGO` — so each failure branch
+is reachable and each returns `eyre::Result` with per-stage context, and six
+tests: the member set matches exactly, the core declares no dependencies at all
+(D1), the declared edge set equals `INTENDED_EDGES`, each intended member is
+present, and one test pins each of the two failure branches.
+
+The helper is split rather than monolithic because a single
+`workspace_metadata` function put its command-failure and parse-failure
+branches out of a test's reach: the first needs a program that fails to spawn,
+and the second needs bytes that are not JSON. Taking the program as a parameter
+makes the first reachable without mutating the environment, and separating the
+parse step makes the second pure. Neither test spawns a competing `cargo`, so
+neither needs `file_serial`; the spawn-failure test's program never starts a
+process at all.
 
 The matchers are imported narrowly (`contains`, `eq`, `empty`, `assert_that`,
 and `GoogleTestSupport`) rather than via `use googletest::prelude::*`, because
@@ -1088,6 +1099,12 @@ these revisions are carried by pull request #112.
 - `workspace_metadata` and its helpers return `eyre::Result` with per-stage
   context, so a failure names whether `cargo metadata`, JSON parsing, or
   package lookup failed.
+- That context was then made testable, on review feedback that the error paths
+  were unverified: the helper split into `parse_metadata(stdout)` and
+  `metadata_from(program)`, and two tests pin the branches (a spawn that cannot
+  succeed, and non-JSON bytes), each asserting the error names the failing
+  stage. Mutation-checked by reverting the parse `wrap_err` to a bare
+  `map_err`, which fails exactly the parse-stage test.
 - The `rstest` parameterized cases carry a serialization attribute, matching
   the module's stated serialization guarantee. (That attribute is
   `file_serial`; see the formal-review entry below.)
