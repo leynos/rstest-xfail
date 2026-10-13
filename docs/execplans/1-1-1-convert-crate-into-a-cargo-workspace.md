@@ -74,9 +74,12 @@ Hard invariants. Violation requires escalation, not a workaround.
 - **D1 — core purity.** `rstest-xfail-core` must not depend on
   `rstest-xfail-macros` or `rstest-xfail`, and must not list `proc-macro2`,
   `syn`, or `quote` among its dependencies, directly or through a feature. The
-  dependency arrows point one way only: `rstest-xfail` depends on both
+  dependency arrows point one way only: `rstest-xfail` may depend on both
   siblings, and `rstest-xfail-macros` may depend on `rstest-xfail-core`. The
-  core depends on neither. This is gated by an automated test (see Concrete
+  core depends on neither. The facade's edge to the core is permitted but not
+  required at 1.1.1 — the core exposes no public items yet, so the edge would
+  be one no target could use, and it is declared when the core vocabulary
+  arrives at roadmap 1.2.x. This is gated by an automated test (see Concrete
   steps), not only a manual command.
 - **C-SURFACE-1 — placeholder surface only.** The facade re-exports only the
   placeholder `#[xfail]` attribute. The core exposes no public items at 1.1.1

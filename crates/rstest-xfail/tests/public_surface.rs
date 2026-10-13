@@ -157,6 +157,25 @@ fn a_restricted_visibility_is_not_surface() {
     );
 }
 
+/// An item-position macro invocation is reported, not skipped.
+///
+/// `syn` nests two forms under `Item::Macro`. A `macro_rules!` definition names
+/// itself, but `reexports!();` has no ident: the compiler expands its tokens, so
+/// the expansion can add public items this source-level walk never reads. That
+/// makes it the same fail-open hole as an unclassifiable item form, and the
+/// error must say which form was found.
+#[test]
+fn an_item_position_macro_invocation_is_reported() {
+    let source = "reexports!();\n";
+    let reported = exported_paths(source)
+        .expect_err("an item-position invocation must be reported, not skipped")
+        .to_string();
+    assert!(
+        reported.contains("macro invocation"),
+        "the error must name the offending form, got: {reported}"
+    );
+}
+
 /// An item form the walker cannot classify is reported, not skipped.
 ///
 /// `Item::Verbatim` is `syn`'s escape hatch for tokens it will not interpret —

@@ -142,22 +142,14 @@ def test_a_stale_force_file_cannot_suppress_a_rebuild(
     release scenario that pre-created only the debug artefact would rebuild
     because the release artefact is *missing*, which passes against the mutant
     and proves nothing.
+
+    Asserting the expected cargo invocation per goal carries the recipe
+    contract too: ``build`` must reach Cargo with no profile flag and
+    ``release`` with ``--release``, so the profile each goal names actually
+    reaches the command. Both claims share one run of the recipes, which is
+    why they are asserted together.
     """
     invocations = [call.split() for call in _invocations(tmp_path, goal, profile=profile)]
     assert expected.split() in invocations, (
         f"a stale FORCE file suppressed the {goal} rebuild; cargo was called with {invocations}"
-    )
-
-
-@pytest.mark.parametrize(
-    ("goal", "expected"), [("build", "build"), ("release", "build --release")]
-)
-def test_the_recipes_invoke_cargo_build(
-    tmp_path: Path, goal: str, expected: str
-) -> None:
-    """The profile flag reaches Cargo, so each goal builds the profile it names."""
-    profile = "release" if goal == "release" else "debug"
-    invocations = [call.split() for call in _invocations(tmp_path, goal, profile=profile)]
-    assert expected.split() in invocations, (
-        f"`make {goal}` did not run `cargo {expected}`; it ran {invocations}"
     )

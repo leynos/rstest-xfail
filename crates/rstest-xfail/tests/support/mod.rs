@@ -237,7 +237,14 @@ fn check_impl_block(block: &ItemImpl) -> Result<()> {
     Ok(())
 }
 
-/// Rejects a `macro_rules!` that exports a name at the crate root.
+/// Rejects a macro form this derivation cannot attribute to names.
+///
+/// `syn` puts two forms under `Item::Macro`. A `macro_rules!` definition names
+/// itself in `ident`, and adding `#[macro_export]` puts that name at the crate
+/// root. An item-position invocation such as `reexports!();` has no `ident` at
+/// all: its tokens are expanded by the compiler, so the expansion may add
+/// public items this source-level walk never reads. Both are reported rather
+/// than skipped, for the same reason as the other fail-closed arms here.
 fn check_macro(declaration: &ItemMacro) -> Result<()> {
     let is_exported = declaration
         .attrs
@@ -245,6 +252,12 @@ fn check_macro(declaration: &ItemMacro) -> Result<()> {
         .any(|attribute| attribute.path().is_ident("macro_export"));
     if is_exported {
         bail!("a `#[macro_export]` macro adds a root name this derivation cannot enumerate");
+    }
+    if declaration.ident.is_none() {
+        bail!(
+            "an item-position macro invocation may expand to public items this derivation cannot \
+             enumerate"
+        );
     }
     Ok(())
 }
