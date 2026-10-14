@@ -18,7 +18,7 @@ rstest-xfail-macros.workspace = true
 
 [dev-dependencies]
 rstest = "0.26.1"
-googletest = "0.13"
+googletest = "0.14"
 pretty_assertions = "1.4.1"
 insta = "1.48.0"
 serde_json = "1.0.151"
