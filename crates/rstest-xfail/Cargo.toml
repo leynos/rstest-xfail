@@ -17,7 +17,7 @@ categories.workspace = true
 rstest-xfail-macros.workspace = true
 
 [dev-dependencies]
-rstest = "0.26.1"
+rstest = "0.27.0"
 googletest = "0.13"
 pretty_assertions = "1.4.1"
 insta = "1.48.0"
