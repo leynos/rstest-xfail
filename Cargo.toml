@@ -6,6 +6,10 @@ members = [
     "crates/rstest-xfail",
 ]
 
+[profile.dev]
+incremental = false
+debug = 0
+
 [workspace.package]
 version = "0.1.0"
 edition = "2024"

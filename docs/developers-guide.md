@@ -105,6 +105,30 @@ Whitaker is the df12 Productions opinionated lint suite used by `make lint`.
 See the [Whitaker user's guide](whitaker-users-guide.md) for installation,
 configuration, and local invocation details.
 
+Whitaker builds on its installer-managed toolchain, which must not inherit the
+development flags, so `make lint` runs it differently from Clippy. The command
+is one `env` prefix that clears `CARGO_ENCODED_RUSTFLAGS` (which Cargo reads in
+preference to `RUSTFLAGS`), assigns `RUSTFLAGS` the warning policy alone (an
+unset value would leave Cargo reading the configuration's `rustflags`), sets
+`CARGO_PROFILE_DEV_CODEGEN_BACKEND=llvm` to displace the Cranelift development
+default, and sets `CARGO_UNSTABLE_CODEGEN_BACKEND=true`, which opts in the
+temporary Cargo project where Dylint builds its driver and which cannot
+discover the root `.cargo/config.toml`. `test_the_whitaker_route_is_isolated`
+parses the printed command and asserts each of those.
+
+### Development build footprint
+
+The Concordat `rust-dev-build-footprint` rule keeps default development builds
+small. `Cargo.toml` sets `incremental = false` and `debug = 0` in
+`[profile.dev]`, which the test profile inherits, and `.cargo/config.toml` sets
+`[unstable] embed-metadata = false`, the native Cargo setting for dated
+nightlies from 2026-07-31; read the pin from `rust-toolchain.toml`, because
+stable Cargo ignores the table. The trade-off is that a debugger sees no
+source-level debug information or line tables in a default development build
+and every rebuild recompiles whole crates. To debug, run with
+`CARGO_PROFILE_DEV_DEBUG=true`; to rebuild incrementally, set
+`CARGO_INCREMENTAL=1`.
+
 Lading is the df12 Productions release helper for Cargo workspaces. See the
 [Lading user guide](lading-users-guide.md) for version bumping, publication
 planning, and workspace publishing workflows.
