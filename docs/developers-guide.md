@@ -113,8 +113,8 @@ unset value would leave Cargo reading the configuration's `rustflags`), sets
 `CARGO_PROFILE_DEV_CODEGEN_BACKEND=llvm` to displace the Cranelift development
 default, and sets `CARGO_UNSTABLE_CODEGEN_BACKEND=true`, which opts in the
 temporary Cargo project where Dylint builds its driver and which cannot
-discover the root `.cargo/config.toml`. `test_the_whitaker_route_is_isolated`
-parses the printed command and asserts each of those.
+discover the root `.cargo/config.toml`. The Concordat rule is the check for the
+route.
 
 ### Development build footprint
 

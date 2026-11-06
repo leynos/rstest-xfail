@@ -172,32 +172,3 @@ def test_coverage_recipe_selects_llvm() -> None:
     for line in coverage:
         assert "CARGO_PROFILE_DEV_CODEGEN_BACKEND=llvm" in line, line
 
-
-def test_the_whitaker_route_is_isolated() -> None:
-    """Whitaker clears inherited flag sources and assigns its own.
-
-    Its toolchain must not inherit the development flags. An unset
-    ``RUSTFLAGS`` would leave Cargo reading the configuration's ``rustflags``,
-    so the route assigns the warning policy alone, clears the encoded flags that
-    Cargo prefers, displaces the Cranelift development profile with LLVM, and
-    opts the temporary project where Dylint builds its driver into the backend
-    key.
-    """
-    routes = [line for line in _make_commands("lint") if _runs_whitaker(line)]
-    assert routes, "`make lint` runs no Whitaker command"
-    for route in routes:
-        words = shlex.split(route)
-        removed = {words[i + 1] for i, word in enumerate(words[:-1]) if word == "-u"}
-        assert "CARGO_ENCODED_RUSTFLAGS" in removed, f"encoded flags not cleared: {route}"
-        assigned = dict(
-            word.split("=", 1) for word in words if re.match(r"[A-Z_]+=", word)
-        )
-        assert assigned.get("RUSTFLAGS") == "-D warnings", (
-            f"Whitaker must assign the warning policy alone: {route}"
-        )
-        assert assigned.get("CARGO_PROFILE_DEV_CODEGEN_BACKEND") == "llvm", (
-            f"Whitaker must displace the Cranelift development profile: {route}"
-        )
-        assert assigned.get("CARGO_UNSTABLE_CODEGEN_BACKEND") == "true", (
-            f"Whitaker's driver build needs the backend key: {route}"
-        )
