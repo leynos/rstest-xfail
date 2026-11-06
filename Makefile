@@ -100,10 +100,16 @@ coverage: ## Generate lcov coverage with lld for llvm-tools compatibility
 		LDFLAGS="$(COVERAGE_LINKER_FLAGS)" \
 		$(CARGO) llvm-cov --lcov --output-path lcov.info $(TEST_FLAGS)
 
+# Whitaker builds on its installer-managed toolchain, so its command clears the
+# encoded flags and assigns the warning policy alone, spelled out rather than
+# taken from RUST_FLAGS (which the template assigns twice) so that a static
+# reader can prove the boundary. LLVM displaces the Cranelift development
+# profile, and the backend key opts in the temporary project where Dylint builds
+# its driver.
 lint: ## Run Clippy and the Whitaker Dylint suite with warnings denied
 	RUSTDOCFLAGS="$(RUSTDOC_FLAGS)" $(CARGO) doc --no-deps
 	$(CARGO) clippy $(CLIPPY_FLAGS)
-	RUSTFLAGS="$(RUST_FLAGS) $(STANDARD_RUSTFLAGS)" $(WHITAKER) --all -- $(CARGO_FLAGS)
+	env -u CARGO_ENCODED_RUSTFLAGS RUSTFLAGS="-D warnings" CARGO_PROFILE_DEV_CODEGEN_BACKEND=llvm CARGO_UNSTABLE_CODEGEN_BACKEND=true $(WHITAKER) --all -- $(CARGO_FLAGS)
 
 typecheck: ## Type-check without building
 	RUSTFLAGS="$(RUST_FLAGS) $(STANDARD_RUSTFLAGS)" $(CARGO) check $(CARGO_FLAGS)

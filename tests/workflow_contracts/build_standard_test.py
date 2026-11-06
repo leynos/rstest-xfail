@@ -52,8 +52,8 @@ def _sources() -> dict[str, list[str]]:
     return {key: _normalized(flags) for key, flags in sources.items() if flags}
 
 
-def _make_rustflags(target: str) -> list[list[str]]:
-    """Return the ``RUSTFLAGS`` each command of ``make -n TARGET`` assigns."""
+def _make_commands(target: str) -> list[str]:
+    """Return the commands ``make -n TARGET`` prints, continuations joined."""
     result = subprocess.run(
         ["make", "-n", "-B", "BUILD_HOST_OS=Linux", target],
         cwd=ROOT,
@@ -62,11 +62,36 @@ def _make_rustflags(target: str) -> list[list[str]]:
         check=True,
     )
     # A recipe continued with a trailing backslash is one command.
-    commands = result.stdout.replace("\\\n", " ").splitlines()
+    return result.stdout.replace("\\\n", " ").splitlines()
+
+
+def _runs_whitaker(line: str) -> bool:
+    """Return whether the command executes Whitaker, past ``env`` and assignments."""
+    words = shlex.split(line)
+    index = 0
+    while index < len(words):
+        word = words[index]
+        if word == "env":
+            index += 1
+        elif word == "-u":
+            index += 2
+        elif re.match(r"[A-Za-z_][A-Za-z0-9_]*=", word):
+            index += 1
+        else:
+            return word.rsplit("/", 1)[-1] == "whitaker"
+    return False
+
+
+def _make_rustflags(target: str) -> list[list[str]]:
+    """Return the ``RUSTFLAGS`` each Cargo command of ``make -n TARGET`` assigns.
+
+    Whitaker is not a Cargo gate build: its installer-managed toolchain takes
+    none of the development flags, so its route is held to its own test.
+    """
     return [
         shlex.split(match.group(1))
-        for line in commands
-        if "cargo" in line or "whitaker" in line
+        for line in _make_commands(target)
+        if "cargo" in line and not _runs_whitaker(line)
         for match in [RUSTFLAGS_RE.search(line)]
         if match
     ]
@@ -102,7 +127,7 @@ def test_sources_differ_only_by_the_linker() -> None:
     assert len(stripped) == 1, f"rustflags sources disagree: {stripped}"
 
 
-@pytest.mark.parametrize("target", ["test", "typecheck", "lint"])
+@pytest.mark.parametrize("target", ["test", "typecheck"])
 def test_gate_targets_restate_both_flags(target: str) -> None:
     """An assigned RUSTFLAGS replaces the configuration's sources."""
     assignments = _make_rustflags(target)
