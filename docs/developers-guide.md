@@ -249,4 +249,4 @@ holds the local wiring: the pin is a full commit, the target runs the pinned
 checker with `check --repository .` under Python 3.13, `.github/cv005.toml`
 names this repository, `make all` includes the target, and CI runs it. The
 decision is recorded in
-[ADR 001](adr-001-adopt-the-shared-cv005-contract-library.md).
+[ADR 001](adrs/adr-0001-adopt-the-shared-cv005-contract-library.md).
