@@ -739,7 +739,7 @@ Both red tests now pass. Run `make test` to confirm.
    `insta` snapshot plus the body-pass-through assertion) and generate the
    snapshot. Add the `rstest` parameterized presence test and the D1 purity
    test to `crates/rstest-xfail/tests/workspace_members.rs`.
-3. Write `docs/adr-002-cargo-workspace-and-crate-boundaries.md`.
+3. Write `docs/adrs/adr-0002-cargo-workspace-and-crate-boundaries.md`.
 4. Update `docs/repository-layout.md`, `docs/developers-guide.md`,
    `docs/contents.md`, and add the one-line realization note plus ADR reference
    to `docs/xfail-design.md` §5.
@@ -949,9 +949,9 @@ These deferrals are deliberate scoping, not omissions.
 
 ### The ADR
 
-Create `docs/adr-002-cargo-workspace-and-crate-boundaries.md` following the
-style guide's required ADR sections. It records only the workspace and boundary
-decision, not strictness (1.1.2) or async (1.1.3):
+Create `docs/adrs/adr-0002-cargo-workspace-and-crate-boundaries.md` following
+the style guide's required ADR sections. It records only the workspace and
+boundary decision, not strictness (1.1.2) or async (1.1.3):
 
 - **Status:** Accepted, 2026-06-24, "Adopt a three-crate Cargo workspace under
   `crates/` with a pure core".
@@ -1233,7 +1233,7 @@ That round also asked for two follow-up issues, and verified that none existed
   unaffected because D1 constrains the core's own dependencies.
 - The final reconciling pass corrected plan text that still named artefacts the
   implemented branch does not have. The crate-boundary ADR is
-  `adr-002-cargo-workspace-and-crate-boundaries.md` (`adr-001` having gone to
+  `adr-0002-cargo-workspace-and-crate-boundaries.md` (`adr-001` having gone to
   the shared CV-005 contract library on `main`), the D1 gate is named
   `core_declares_no_dependencies`, and the deferred `stub.rs` placeholder is
   described as deleted rather than as still passing. Acceptance criteria that

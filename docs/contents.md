@@ -24,10 +24,10 @@ documentation set.
 
 ## Decision records
 
-- [ADR 001: Adopt the shared CV-005 contract library](adr-001-adopt-the-shared-cv005-contract-library.md)
+- [ADR 001: Adopt the shared CV-005 contract library](adrs/adr-0001-adopt-the-shared-cv005-contract-library.md)
   records the move from a local copy of the CV-005 contract to the pinned
   shared check.
-- [ADR 002: Cargo workspace and crate boundaries](adr-002-cargo-workspace-and-crate-boundaries.md)
+- [ADR 002: Cargo workspace and crate boundaries](adrs/adr-0002-cargo-workspace-and-crate-boundaries.md)
   records the decision to adopt a three-crate Cargo workspace under `crates/`
   with a pure core.
 
