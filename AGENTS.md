@@ -235,24 +235,24 @@ project:
     enabled. Documentation warnings, Clippy warnings, and Whitaker findings
     fail the command. `CARGO_FLAGS` defaults to `--all-targets --all-features`.
     The `cargo doc` and `cargo clippy` steps inherit the rustflags from
-    `.cargo/config.toml`, which set `-Zthreads=8` and, on Linux, the `mold`
-    linker. The Whitaker step assigns `RUSTFLAGS` to `-D warnings` alone, which
-    displaces those inherited flags, and selects the LLVM codegen backend.
+    `.cargo/config.toml`, which set `-Zthreads=8` for builds and the `mold`
+    linker for the `x86_64-unknown-linux-gnu` target. The Whitaker step assigns
+    `RUSTFLAGS` to `-D warnings` alone, which displaces those inherited flags,
+    and selects the LLVM codegen backend.
   - `make test` executes:
 
     ```makefile
     RUSTFLAGS="-D warnings -Zthreads=8 -Clink-arg=-fuse-ld=mold" cargo nextest run --all-targets --all-features
-    RUSTDOCFLAGS="-D warnings" cargo test --doc --workspace --all-features
+    RUSTFLAGS="-D warnings -Zthreads=8 -Clink-arg=-fuse-ld=mold" cargo test --doc --workspace --all-features
     ```
 
     running the full test suite with `cargo nextest run` when `cargo nextest`
-    is installed, and with `cargo test` otherwise. The `mold` flag applies on
-    Linux only. The first command assigns `RUSTFLAGS` for warnings denial, the
-    `-Zthreads=8` frontend, and the `mold` linker. The second command sets only
-    `RUSTDOCFLAGS`, so it inherits the rustflags from `.cargo/config.toml`, and
-    runs all-feature workspace doctests with Rustdoc warnings denied.
-    Use `make fmt` to apply the formatting fixes reported by the formatter
-    check. It runs `cargo +nightly fmt --all`, rewrites Markdown with
+    is installed, and with `cargo test` otherwise, then running the all-feature
+    workspace doctests. Both commands assign `RUSTFLAGS` to warnings denial,
+    the `-Zthreads=8` frontend, and the `mold` linker. The Makefile adds the
+    `mold` flag only on Linux hosts. The doctest command does not set
+    `RUSTDOCFLAGS`. Use `make fmt` to apply the formatting fixes reported by the
+    formatter check. It runs `cargo +nightly fmt --all`, rewrites Markdown with
     `mdtablefix --in-place`, and runs `markdownlint-cli2 --fix`.
 - Clippy warnings MUST be disallowed.
 - Fix any warnings emitted during tests in the code itself rather than
