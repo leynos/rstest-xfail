@@ -77,8 +77,14 @@ regression fails there rather than being re-read.
 
 ## Tooling
 
-Development builds use Cranelift for debug code generation. Every `rustflags`
-source in `.cargo/config.toml` enables the parallel `rustc` frontend with
+LLVM is the default codegen backend: the estate standard dropped Cranelift,
+with review due 14 May 2027 (see the
+[concordat decision record](https://github.com/leynos/concordat/blob/main/docs/adrs/adr-0004-cranelift-is-not-part-of-the-rust-build-standard.md)).
+The Cranelift selection in `.cargo/config.toml` is commented out. To opt in,
+pass `--config 'profile.dev.codegen-backend="cranelift"'`; Cranelift does not
+unwind, so no test may rely on a caught panic under it. An inherited
+`CARGO_PROFILE_*_CODEGEN_BACKEND` can still select it. Every `rustflags` source
+in `.cargo/config.toml` enables the parallel `rustc` frontend with
 `-Zthreads=8`, and on Linux targets it also configures clang to link with
 `mold` so debug builds link quickly. Cargo applies one `rustflags` source and
 an assigned `RUSTFLAGS` replaces them all, so the Makefile restates both flags
@@ -110,8 +116,8 @@ development flags, so `make lint` runs it differently from Clippy. The command
 is one `env` prefix that clears `CARGO_ENCODED_RUSTFLAGS` (which Cargo reads in
 preference to `RUSTFLAGS`), assigns `RUSTFLAGS` the warning policy alone (an
 unset value would leave Cargo reading the configuration's `rustflags`), sets
-`CARGO_PROFILE_DEV_CODEGEN_BACKEND=llvm` to displace the Cranelift development
-default, and sets `CARGO_UNSTABLE_CODEGEN_BACKEND=true`, which opts in the
+`CARGO_PROFILE_DEV_CODEGEN_BACKEND=llvm` to displace any inherited Cranelift
+selection, and sets `CARGO_UNSTABLE_CODEGEN_BACKEND=true`, which opts in the
 temporary Cargo project where Dylint builds its driver and which cannot
 discover the root `.cargo/config.toml`. The Concordat rule is the check for the
 route.
