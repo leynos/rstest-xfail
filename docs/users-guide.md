@@ -19,7 +19,7 @@ roots are placeholder stubs until the vocabulary (roadmap 1.2.x) and the macro
 (roadmap 2.1.x) land. To work on a single crate, pass `-p <crate>` to `cargo`.
 See [repository layout](repository-layout.md) for the full tree.
 
-Development builds use Cranelift for debug code generation. On Linux targets,
+Development builds use LLVM, the default codegen backend. On Linux targets,
 `.cargo/config.toml` configures clang to link with `mold` so local debug builds
 link quickly. Coverage generation uses `lld` instead because LLVM coverage
 tools expect LLVM-compatible linker behaviour.
