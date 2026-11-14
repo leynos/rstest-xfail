@@ -116,9 +116,10 @@ development flags, so `make lint` runs it differently from Clippy. The command
 is one `env` prefix that clears `CARGO_ENCODED_RUSTFLAGS` (which Cargo reads in
 preference to `RUSTFLAGS`), assigns `RUSTFLAGS` the warning policy alone (an
 unset value would leave Cargo reading the configuration's `rustflags`), sets
-`CARGO_PROFILE_DEV_CODEGEN_BACKEND=llvm` to displace any inherited Cranelift
-selection, and sets `CARGO_UNSTABLE_CODEGEN_BACKEND=true`, which opts in the
-temporary Cargo project where Dylint builds its driver and which cannot
+`CARGO_PROFILE_DEV_CODEGEN_BACKEND=llvm` to displace an inherited dev-profile
+Cranelift selection (a per-package selection in Cargo configuration would still
+take precedence), and sets `CARGO_UNSTABLE_CODEGEN_BACKEND=true`, which opts in
+the temporary Cargo project where Dylint builds its driver and which cannot
 discover the root `.cargo/config.toml`. The Concordat rule is the check for the
 route.
 
