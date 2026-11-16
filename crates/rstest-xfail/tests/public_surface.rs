@@ -297,20 +297,34 @@ fn predicates_to_depth(remaining: u32) -> Vec<model::Pred> {
         return all;
     }
     let inner = predicates_to_depth(remaining - 1);
-    for operand in &inner {
-        all.push(Pred::Not(Box::new(operand.clone())));
-    }
+    all.extend(negations(&inner));
     // `all` and `any` with one and two operands. Three operands add nothing
     // that nesting two does not already reach at this depth.
-    for first in &inner {
-        all.push(Pred::All(vec![first.clone()]));
-        all.push(Pred::Any(vec![first.clone()]));
-        for second in &inner {
-            all.push(Pred::All(vec![first.clone(), second.clone()]));
-            all.push(Pred::Any(vec![first.clone(), second.clone()]));
-        }
-    }
+    all.extend(inner.iter().flat_map(|first| combinations(first, &inner)));
     all
+}
+
+/// Wraps each operand in `not(..)`.
+fn negations(inner: &[model::Pred]) -> Vec<model::Pred> {
+    inner
+        .iter()
+        .map(|operand| model::Pred::Not(Box::new(operand.clone())))
+        .collect()
+}
+
+/// The `all` and `any` forms that start with `first`: alone, then paired with
+/// each operand in turn.
+fn combinations(first: &model::Pred, inner: &[model::Pred]) -> Vec<model::Pred> {
+    use model::Pred;
+    let mut forms = vec![
+        Pred::All(vec![first.clone()]),
+        Pred::Any(vec![first.clone()]),
+    ];
+    for second in inner {
+        forms.push(Pred::All(vec![first.clone(), second.clone()]));
+        forms.push(Pred::Any(vec![first.clone(), second.clone()]));
+    }
+    forms
 }
 
 /// The derivation agrees with an independent model over every bounded

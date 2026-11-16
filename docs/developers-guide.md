@@ -24,7 +24,13 @@ The repository is a Cargo workspace with three member crates under `crates/`:
 - `rstest-xfail` — the facade that re-exports the public surface for users.
 
 `cargo` operates across all members by default. Target one crate with
-`-p <crate>` (for example `cargo test -p rstest-xfail`). Lint and dependency
+`-p <crate>` (for example `cargo test -p rstest-xfail`). `clippy.toml` disallows
+`std::env::set_var`, `remove_var` and `set_current_dir`, because a test that
+changes the process-wide environment or working directory forces the runner to
+serialize tests; inject an environment object, pass a directory in, or isolate
+the change to a child process with `Command::env` and `Command::current_dir`. A
+site that cannot yet migrate carries
+`#[expect(clippy::disallowed_methods, reason = ...)]`. Lint and dependency
 policy are inherited from `[workspace.lints]` and `[workspace.dependencies]` in
 the virtual root manifest. Each member manifest opts in key by key rather than
 wholesale: `[lints] workspace = true` inherits the lint policy, and the package
