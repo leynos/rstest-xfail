@@ -28,9 +28,8 @@ The repository is a Cargo workspace with three member crates under `crates/`:
 `std::env::set_var`, `remove_var` and `set_current_dir`, because a test that
 changes the process-wide environment or working directory forces the runner to
 serialize tests; inject an environment object, pass a directory in, or isolate
-the change to a child process with `Command::env` and `Command::current_dir`. A
-site that cannot yet migrate carries
-`#[expect(clippy::disallowed_methods, reason = ...)]`. Lint and dependency
+the change to a child process with `Command::env` and `Command::current_dir`.
+Do not suppress these entries for in-process test mutation. Lint and dependency
 policy are inherited from `[workspace.lints]` and `[workspace.dependencies]` in
 the virtual root manifest. Each member manifest opts in key by key rather than
 wholesale: `[lints] workspace = true` inherits the lint policy, and the package
