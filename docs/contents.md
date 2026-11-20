@@ -61,3 +61,5 @@ documentation set.
 
 - [Convert the crate into a Cargo workspace (1.1.1)](execplans/1-1-1-convert-crate-into-a-cargo-workspace.md)
   is the execution plan for roadmap task 1.1.1.
+- [Record strict XPASS default behaviour (1.1.2)](execplans/1-1-2-record-strict-xpass-default-behaviour.md)
+  proposes the policy ADR and its verification; implementation awaits approval.
