@@ -128,6 +128,14 @@ the temporary Cargo project where Dylint builds its driver and which cannot
 discover the root `.cargo/config.toml`. The Concordat rule is the check for the
 route.
 
+Cognitive complexity is not gated by Clippy. Clippy's `cognitive_complexity`
+scores code after macro expansion, so it counts branching a macro generated,
+and neither `Cargo.toml` nor `clippy.toml` enables it. Whitaker's experimental
+`macro_aware_cognitive_complexity` gates it at `max_complexity = 9`,
+CodeScene's ceiling. `dylint.toml` opts in with
+`[whitaker] experimental = ["macro_aware_cognitive_complexity"]`. Fix a finding
+by extracting named helpers, never by raising the threshold.
+
 ### Development build footprint
 
 The Concordat `rust-dev-build-footprint` rule keeps default development builds
