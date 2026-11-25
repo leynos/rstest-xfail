@@ -207,6 +207,21 @@ matching Table 1 row. The repair re-ran the affected Markdown gates; it did not
 touch Rust, so the compile and test gates remain valid for the unchanged
 sources.
 
+A second CLI pass over `fba3fca..57a9c8a` repeated neither finding and raised
+two consistency points, both accepted. Design §6 now distinguishes the
+user-facing default from an adapter's deliberate programmatic choice, so the
+`XfailPolicy` sketch no longer contradicts the marker-only route to
+`Strictness::NonStrict`. The ADR context now frames the terms-of-reference and
+design positions in the past tense, at the time of drafting, so an accepted
+record does not read as an open question. A third pass repeated none of those
+and raised one related point for the developer guide, which now scopes the
+marker-only rule to the macro surface. It also raised the unspecified
+`#[should_panic]` combination; design §7 now rejects that combination at
+compile time and §12 carries the matching `trybuild` row. This is a
+clarification of the existing unsupported-construct rule, required by failure
+preservation (P3), not a change to the v1 strictness decision. No policy
+content changed.
+
 ## Context and orientation
 
 `docs/contents.md` indexes the project. `docs/repository-layout.md` describes

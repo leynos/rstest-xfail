@@ -31,10 +31,12 @@ The mapping for the version 1 policy is:
 - Unexpected failure: panic with the reason, the observed detail, and the
   policy mismatch under both strictness settings.
 
-Strictness stays local to one marker. `strict` defaults to `true`, and the only
-way to select non-strict is `strict = false` on that marker; there is no
-global, workspace, or environment override. The internal contract to preserve
-is:
+Strictness stays local to one marker in the macro surface. `strict` defaults to
+`true`, and the macro's only route to non-strict is `strict = false` on that
+marker; there is no global, workspace, or environment override. An adapter that
+builds a policy through the core API chooses strictness programmatically for
+its own surface, which is a deliberate code-level choice rather than a
+configuration switch. The internal contract to preserve is:
 
 - An omitted `strict` and `strict = true` are indistinguishable.
 - Switching to non-strict changes only the XPASS harness result; XFAIL and

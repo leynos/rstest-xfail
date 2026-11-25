@@ -21,13 +21,13 @@ it.
 
 The terms of reference require strict XPASS by default so a fixed bug fails the
 suite and prompts removal of the marker, and they exclude silently non-strict
-behaviour because it hides fixed bugs (terms of reference §§6.1-6.2). Section 9
-leaves open whether `strict = false` ships in version 1 or is deferred. The
-technical design proposes both `Strictness::Strict` and `Strictness::NonStrict`
-(§6), documents `strict` as defaulting to `true` (§7), and defers the release
-decision (§14). Roadmap task 1.1.2 requires an accepted record that answers the
-version 1 question and names the consequence for Continuous Integration (CI)
-users.
+behaviour because it hides fixed bugs (terms of reference §§6.1-6.2). At the
+time this record was drafted, section 9 left open whether `strict = false`
+would ship in version 1 or be deferred. The technical design proposes both
+`Strictness::Strict` and `Strictness::NonStrict` (§6), documents `strict` as
+defaulting to `true` (§7), and had deferred the release decision (§14). Roadmap
+task 1.1.2 requires an accepted record that answers the version 1 question and
+names the consequence for Continuous Integration (CI) users.
 
 Stock Rust test harnesses have no XFAIL or XPASS summary category. A test that
 returns `()` or `Ok(())` passes, and a panic or `Err` fails: the classifier and
@@ -78,8 +78,9 @@ adopts the vocabulary but not that default.
   `XfailOutcome` retains the classification for reporting and downstream
   adapters.
 - `Strictness::Strict` is the default for the core policy and for the macro
-  argument parser. `Strictness::NonStrict` is reachable only through an explicit
-  `strict = false`.
+  argument parser, whose only route to `Strictness::NonStrict` is an explicit
+  `strict = false`. The core exposes the vocabulary to adapters but adds no
+  global, workspace, or environment default switch.
 - Adapters panic on every unexpected failure, matching the design requirement
   that a mismatched failure can never be rewritten into a passing test.
 

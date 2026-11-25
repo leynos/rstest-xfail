@@ -166,9 +166,12 @@ pub enum XfailOutcome {
 }
 ```
 
-`Strictness::Strict` is the default for version 1, and `Strictness::NonStrict`
-is reachable only through an explicit `strict = false` on one marker. No global
-or environment setting changes the default. See
+The user-facing default is strict: omitting `strict` behaves like
+`strict = true`, and the macro's only route to `Strictness::NonStrict` is an
+explicit `strict = false` on one marker. No global, workspace, or environment
+setting changes the default. Adapters that construct a policy through the core
+API make a deliberate programmatic choice for their own surface; the core adds
+no configuration switch. See
 [ADR 0003](adrs/adr-0003-strict-xpass-default-and-non-strict-policy.md).
 
 The first implementation may keep fields private and expose constructors if
@@ -258,6 +261,10 @@ Rules:
 - `#[xfail]` on a non-function item is a compile error.
 - `#[xfail]` on functions with unsupported signatures is a compile error with
   a diagnostic that names the unsupported construct.
+- `#[should_panic]` on the same function as `#[xfail]` is a compile error. The
+  two attributes assign opposite meanings to a panic, and preserving
+  `#[should_panic]` would let an unexpected failure or a strict XPASS satisfy
+  the harness, breaking failure preservation.
 
 The macro should preserve:
 
@@ -424,6 +431,7 @@ The correctness property is small enough to state precisely:
 | `mode = "panic"` rejects `Result::Err` as unexpected failure and fails the harness.              | Unit tests over policy classification plus runtime macro tests.   |
 | `mode = "result"` rejects panic as unexpected failure and fails the harness.                     | Unit tests over policy classification plus runtime macro tests.   |
 | `contains = "..."` mismatch becomes unexpected failure and fails the harness.                    | Unit tests for panic and error messages plus runtime macro tests. |
+| `#[should_panic]` combined with `#[xfail]` is rejected at compile time.                          | `trybuild` compile-fail cases.                                    |
 | `rstest` per-case xfail affects only the intended generated case.                                | `trybuild` compile tests plus black-box generated-test fixtures.  |
 | Async xfail works with each supported runtime macro and documented attribute order.              | Feature-gated `trybuild` cases and runtime tests.                 |
 
