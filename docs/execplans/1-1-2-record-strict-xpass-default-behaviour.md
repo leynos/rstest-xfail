@@ -251,6 +251,12 @@ its contract as planned, because the crate roots remain placeholders.
 Publication and hosted CI/review state are recorded by PR delivery, not by this
 local plan.
 
+The hosted ExecPlan assessment (Assessment-ID `xpass-1.1.2-4367f96-20261125-1`)
+returned "mostly complete" with two in-scope documentation gaps, both accepted.
+Design §4 now separates the classification inputs from the strictness that maps
+a classification to a harness result, and the adapter data-flow list in §5.1
+now includes the non-strict XPASS case. Neither change alters policy.
+
 ## Context and orientation
 
 `docs/contents.md` indexes the project. `docs/repository-layout.md` describes

@@ -61,15 +61,15 @@ Non-goals:
 
 ## 4. Terminology
 
-| Term               | Definition                                                                                                                       |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
-| Expected failure   | A test body outcome that fails in a way permitted by its xfail configuration.                                                    |
-| XFAIL              | The reported expected-failure state. Under libtest this is still an `ok` test unless an adapter records richer output elsewhere. |
-| XPASS              | A test marked xfail that observed a passing body outcome. In strict mode this panics and fails the test.                         |
-| Unexpected failure | A failing body outcome that does not satisfy the xfail policy, such as the wrong failure mode or a failed message match.         |
-| Body outcome       | The raw result of executing the original user body before xfail policy is applied.                                               |
-| Xfail policy       | Reason, strictness, mode, and optional message matching rules used to classify the body outcome.                                 |
-| Adapter            | Code that maps the shared core classifier into a surface: proc macro, async helper, or `rstest-bdd` step integration.            |
+| Term               | Definition                                                                                                                                                 |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Expected failure   | A test body outcome that fails in a way permitted by its xfail configuration.                                                                              |
+| XFAIL              | The reported expected-failure state. Under libtest this is still an `ok` test unless an adapter records richer output elsewhere.                           |
+| XPASS              | A test marked xfail that observed a passing body outcome. In strict mode this panics and fails the test.                                                   |
+| Unexpected failure | A failing body outcome that does not satisfy the xfail policy, such as the wrong failure mode or a failed message match.                                   |
+| Body outcome       | The raw result of executing the original user body before xfail policy is applied.                                                                         |
+| Xfail policy       | Reason, mode, and optional message matching rules used to classify the body outcome, plus the strictness that maps the classification to a harness result. |
+| Adapter            | Code that maps the shared core classifier into a surface: proc macro, async helper, or `rstest-bdd` step integration.                                      |
 
 ## 5. Architecture
 
@@ -109,6 +109,9 @@ consume.
    - `Xfail` prints or records expected-failure detail and lets the rewritten
      test return `()`.
    - strict `Xpass` panics so the harness fails the test.
+   - non-strict `Xpass` prints or records the XPASS detail and lets the
+     rewritten test return `()`; the harness may hide output from successful
+     tests, so the diagnostic is best effort.
    - `UnexpectedFailure` panics with the original failure detail so the harness
      still fails the test.
 
