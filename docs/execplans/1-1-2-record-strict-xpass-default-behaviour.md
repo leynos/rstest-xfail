@@ -62,7 +62,7 @@ applies. Set status BLOCKED for an unapproved architectural deviation.
   scaffold limitation in the users' guide.
 - High impact, low likelihood: adapters conflate non-strict with accepting any
   failure. Publish the complete outcome table and mismatch examples below.
-- Medium impact, medium likelihood: concurrent work takes ADR number 003.
+- Medium impact, medium likelihood: concurrent work takes ADR number 0003.
   Recheck names, choose the next free number, and update all links together. Do
   not overwrite another decision.
 
@@ -80,6 +80,10 @@ applies. Set status BLOCKED for an unapproved architectural deviation.
   design and add executable gate-status capture.
 - [x] (2026-11-04) Complete the reviewed draft and validate the unchanged
   Rust baseline: lint passed, 24 tests passed, and all doctest suites passed.
+- [x] (2026-11-25) Fetch the live PR target and confirm the explicit rebase
+  is already up to date; preserve recovery refs and inspect the child patch.
+- [x] (2026-11-25) Revalidate the current target: 24 tests and all doctest
+  suites passed; typecheck, rustdoc, Clippy, and Whitaker passed.
 - [ ] Obtain explicit plan approval.
 - [ ] EP-M1: ratify the ADR and synchronize policy documents.
 - [ ] EP-M2: reconcile evidence and mark roadmap 1.1.2 done.
@@ -101,6 +105,13 @@ uncommitted plan and temporary logs were absent. Earlier validation reports in
 the conversation are historical evidence, not validation of the restored file.
 Preserve gate exit codes in status files as well as foreground tool results.
 
+The 2026-11-25 refresh found PR #156 still targeting the open spelling-policy
+PR #155, rather than `main`. The fetched target remains the direct parent of
+this branch, so the rebase made no changes and encountered no conflicts. `main`
+has since adopted `docs/adrs/adr-nnnn-title-slug.md` and
+`docs/rfcs/rfc-nnnn-title-slug.md`; the spelling-policy target has not. The
+style guide itself remains `docs/documentation-style-guide.md` on both.
+
 ## Decision log
 
 - 2026-10-20: recommend explicit non-strict support in v1 while retaining the
@@ -119,6 +130,13 @@ Preserve gate exit codes in status files as well as foreground tool results.
 - 2026-11-04: restore the reviewed policy and proof boundaries, including raw
   observation versus policy normalization, separate macro/default test
   ownership, phase-specific logs, and a configurable ADR audit path.
+
+- 2026-11-25: preserve PR #156's actual target rather than silently retargeting
+  the stack to `main`. Use the revised four-digit ADR convention for the new
+  record, as requested, superseding the 2026-10-20 naming decision. Resolve
+  existing ADR references through the contents index when the prerequisite
+  branch incorporates the documentation migration. Do not migrate existing
+  records as part of this policy task.
 
 ## Outcomes & retrospective
 
@@ -145,10 +163,29 @@ ownership and explicitly defers strictness to this task.
 
 ## Conformance basis
 
-The inspected baseline is commit `09f41344ffde8d5bb870215bb95f051a6e2323a0`,
-unchanged on resumption. The design identifies itself as Draft v0.1, last
-substantive revision 2026-06-07. Use the baseline commit to identify the exact
-terms-of-reference and other revisions.
+The current PR target, fetched on 2026-11-25, is
+`origin/refresh-spelling-policy-20261104` at
+`0a423825c79490e3d0c568c3160e70b26f9917dc`. This is also the exclusive replay
+boundary: the sole child commit before this refresh was
+`30c8ad71cb0dc92296d87f676dd168e978c35c6c`, containing only this plan and its
+index entry. Recovery refs under `refs/recovery/20261125-xpass/` retain
+`old-head`, `old-base`, and `target`. The explicit rebase onto this target
+reported that the branch was already up to date. No lockfile was changed.
+
+The original inspected baseline was `09f41344ffde8d5bb870215bb95f051a6e2323a0`;
+the target adds only the generated spelling-policy prerequisite. The design
+remains Draft v0.1, last substantive revision 2026-06-07. Previous gate results
+remain historical; validate the updated plan afresh before committing it.
+
+For the requested naming refresh, the separately fetched `origin/main` at
+`1ff6d06524e5b9bc3cea7e7cf73fa88efe82d4e8` supplies the revised style-guide
+conventions. Its ADR 002 is
+`docs/adrs/adr-0002-cargo-workspace-and-crate-boundaries.md`; the PR target
+still has `docs/adr-002-cargo-workspace-and-crate-boundaries.md`. Resolve the
+existing record through `docs/contents.md` at implementation time and use
+`docs/adrs/adr-0003-strict-xpass-default-and-non-strict-policy.md` for the
+proposed new record, subject to number availability. This observation does not
+claim that `main` was integrated or change the PR's target.
 
 - C1: roadmap 1.1.2 and terms-of-reference §9 require a v1 yes/no decision and
   CI consequence. EP-M1 discharges this with accepted ADR text (evidence E1).
@@ -265,8 +302,8 @@ question before EP-M1 and a cross-reviewed, consistent decision afterwards.
 
 After approval, verify the branch and clean worktree, then read the references
 below. Check ADR numbering and create
-`docs/adr-003-strict-xpass-default-and-non-strict-policy.md` if 003 is free.
-Follow the style guide's Status, Date, and Context and Problem Statement
+`docs/adrs/adr-0003-strict-xpass-default-and-non-strict-policy.md` if 0003 is
+free. Follow the style guide's Status, Date, and Context and Problem Statement
 headings; add drivers, alternatives, decision, and consequences. Record the
 approval date and Accepted status only after approval. Compare strict-only v1,
 explicit opt-out v1, and non-strict default (rejected by C2).
@@ -328,6 +365,7 @@ set -o pipefail
 phase=baseline-attempt1
 make fmt 2>&1 | tee /tmp/fmt-rstest-xfail-1-1-2-${phase}.out
 make check-fmt 2>&1 | tee /tmp/check-fmt-rstest-xfail-1-1-2-${phase}.out
+make typecheck 2>&1 | tee /tmp/typecheck-rstest-xfail-1-1-2-${phase}.out
 make lint 2>&1 | tee /tmp/lint-rstest-xfail-1-1-2-${phase}.out
 make test 2>&1 | tee /tmp/test-rstest-xfail-1-1-2-${phase}.out
 make markdownlint 2>&1 | tee /tmp/markdownlint-rstest-xfail-1-1-2-${phase}.out
@@ -355,11 +393,15 @@ unrelated regeneration requires the repository's separate base PR workflow. A
 missing outer-shell status is not evidence of success: retain status files so a
 long-lived execution session cannot discard the result.
 
+The PR target's `make typecheck` runs `cargo check` with all targets and
+features, denying warnings. Include it in each milestone's sequential gates;
+Clippy remains an additional lint check, not a substitute for this target.
+
 For the document audit, substitute the actual ADR filename below and read every
 matching passage; search output alone does not establish agreement or links.
 
 ```bash
-adr_path=docs/adr-003-strict-xpass-default-and-non-strict-policy.md
+adr_path=docs/adrs/adr-0003-strict-xpass-default-and-non-strict-policy.md
 rg -n 'strict|XPASS|NonStrict' docs/terms-of-reference.md docs/xfail-design.md \
   docs/users-guide.md docs/developers-guide.md "$adr_path"
 rg -n '1\.1\.2' docs/roadmap.md
@@ -427,3 +469,16 @@ Implementation scope and the approval gate remain unchanged.
 
 2026-11-04: recorded fresh lint and test evidence for the restored plan; 24
 tests and all doctest suites passed. Final prose checks precede publication.
+
+2026-11-25: refreshed the exact PR target and recovery evidence, recorded the
+conflict-free no-op rebase, and reconciled the proposed ADR path with the newer
+style-guide convention on `main` while retaining valid target references. Added
+the existing typecheck target to milestone gates. Policy scope, proof strategy,
+and the explicit implementation-approval boundary remain unchanged.
+
+2026-11-25: fresh `make test`, `make typecheck`, and `make lint` passed. The
+test target ran 24 tests and three empty doctest suites. Logs and immediate
+exit statuses are retained as `/tmp/xpass-rebase-20261125-<target>.out` and
+`.status`. Final formatting, Markdown/spelling, and diagram checks gate the
+plan-refresh commit. No runtime changes or implementation approval followed
+from this validation.
