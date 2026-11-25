@@ -89,8 +89,8 @@ adopts the vocabulary but not that default.
 
 Defer `strict = false` to a later release. This gives the smallest contract and
 the strongest CI feedback: every XPASS fails. The cost is that a project
-adopting `rstest-xfail` with a batch of known failures must triage or remove
-every marker before its suite can be green, and the `strict` argument would
+adopting `rstest-xfail` must triage or remove each marker whose test starts to
+pass (XPASS) before its suite can be green, and the `strict` argument would
 accept only `true` if it shipped at all.
 
 ### Option B: Explicit opt-out with a strict default
@@ -107,13 +107,13 @@ Mirror pytest's default and fail the suite only for explicit `strict = true`.
 Rejected by the terms of reference: silently non-strict xfail hides fixed bugs
 and is an explicit non-goal.
 
-| Dimension               | Option A: strict only | Option B: explicit opt-out | Option C: non-strict default |
-| ----------------------- | --------------------- | -------------------------- | ---------------------------- |
-| Default XPASS result    | Fails suite           | Fails suite                | Passes suite                 |
-| Stale-marker detection  | Always                | Always unless opted out    | Hidden by default            |
-| Migration from pytest   | Triage every marker   | Opt out while cleaning up  | None                         |
-| Version 1 contract size | Smallest              | Two policies, one default  | Two policies, one default    |
-| Terms-of-reference fit  | Meets                 | Meets                      | Violates §6.2                |
+| Dimension               | Option A: strict only    | Option B: explicit opt-out | Option C: non-strict default |
+| ----------------------- | ------------------------ | -------------------------- | ---------------------------- |
+| Default XPASS result    | Fails suite              | Fails suite                | Passes suite                 |
+| Stale-marker detection  | Always                   | Always unless opted out    | Hidden by default            |
+| Migration from pytest   | Triage each XPASS marker | Opt out while cleaning up  | None                         |
+| Version 1 contract size | Smallest                 | Two policies, one default  | Two policies, one default    |
+| Terms-of-reference fit  | Meets                    | Meets                      | Violates §6.2                |
 
 _Table 1: Comparison of strictness options for the version 1 contract._
 

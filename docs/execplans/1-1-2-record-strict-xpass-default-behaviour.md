@@ -199,6 +199,14 @@ tests and the doctest suites; Markdown lint reported 0 issues in 23 files;
 spelling did not regenerate `typos.toml`; `nixie` validated every diagram; and
 the workflow contracts passed 91 pytest cases plus the CV-005 check.
 
+CodeRabbit CLI 0.9.7 reviewed commit `2add935` against `fba3fca` and raised two
+minor findings, both accepted. The user guide now says a non-strict XPASS can
+leave CI green when no other test fails, and the ADR's strict-only migration
+cost now names XPASS markers rather than every known failure, including the
+matching Table 1 row. The repair re-ran the affected Markdown gates; it did not
+touch Rust, so the compile and test gates remain valid for the unchanged
+sources.
+
 ## Context and orientation
 
 `docs/contents.md` indexes the project. `docs/repository-layout.md` describes

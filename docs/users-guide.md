@@ -44,11 +44,11 @@ instead, usually because its bug was fixed.
   an unexpected failure. It fails the test under both settings.
 
 Warning for Continuous Integration (CI) users: with `strict = false`, a test
-that starts passing leaves CI green and keeps a stale expected-failure marker.
-A green suite is not evidence that the marked bug still exists. Prefer the
-strict default, and treat opted-out markers as cleanup debt. The harness may
-also hide diagnostics from successful tests, so an XPASS report is not
-guaranteed to appear in the log.
+that starts passing can leave CI green when no other test fails, and it keeps a
+stale expected-failure marker. A green suite is not evidence that the marked
+bug still exists. Prefer the strict default, and treat opted-out markers as
+cleanup debt. The harness may also hide diagnostics from successful tests, so
+an XPASS report is not guaranteed to appear in the log.
 
 See [ADR 0003](adrs/adr-0003-strict-xpass-default-and-non-strict-policy.md) for
 the decision and [technical design](xfail-design.md) §7 for the planned macro
