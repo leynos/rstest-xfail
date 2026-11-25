@@ -24,6 +24,36 @@ Development builds use Cranelift for debug code generation. On Linux targets,
 link quickly. Coverage generation uses `lld` instead because LLVM coverage
 tools expect LLVM-compatible linker behaviour.
 
+## Expected-failure policy (planned version 1)
+
+The `#[xfail(reason = "...")]` marker is planned for version 1. The three crate
+roots are still placeholders, so the marker is not implemented or enforced yet;
+this section records the policy those crates will follow.
+
+An expected failure (XFAIL) means the test body ran and failed in an allowed
+way. An unexpected pass (XPASS) means a body marked as expected to fail passed
+instead, usually because its bug was fixed.
+
+- Strict XPASS is the default. A passing body under `#[xfail]` fails the test,
+  and therefore the suite, until the marker is removed.
+- `#[xfail(reason = "BUG-123", strict = false)]` is an explicit, per-test
+  opt-out. The body still runs, the result is still classified and reported as
+  XPASS, but the marked test does not fail. There is no global or environment
+  setting for this.
+- A failure that does not match the configured mode or `contains` condition is
+  an unexpected failure. It fails the test under both settings.
+
+Warning for Continuous Integration (CI) users: with `strict = false`, a test
+that starts passing leaves CI green and keeps a stale expected-failure marker.
+A green suite is not evidence that the marked bug still exists. Prefer the
+strict default, and treat opted-out markers as cleanup debt. The harness may
+also hide diagnostics from successful tests, so an XPASS report is not
+guaranteed to appear in the log.
+
+See [ADR 0003](adrs/adr-0003-strict-xpass-default-and-non-strict-policy.md) for
+the decision and [technical design](xfail-design.md) §7 for the planned macro
+arguments.
+
 ## Makefile Targets
 
 The generated `Makefile` exposes these public targets:

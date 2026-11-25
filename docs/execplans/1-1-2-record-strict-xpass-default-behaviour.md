@@ -1,11 +1,11 @@
 # Record strict XPASS default behaviour (1.1.2)
 
-Status: DRAFT — explicit approval required before implementation.
+Status: APPROVED — implementation authorized 2026-11-25.
 
 This ExecPlan is a living document. Keep its constraints, tolerances, risks,
 progress, discoveries, decisions, conformance basis, verification, and outcomes
-current. This branch proposes the plan only; it does not ratify the ADR or
-complete roadmap item 1.1.2.
+current. Explicit approval was granted on 2026-11-25. This plan now proceeds to
+ratify the ADR and complete roadmap item 1.1.2 under milestones EP-M1 and EP-M2.
 
 ## Purpose / big picture
 
@@ -84,8 +84,11 @@ applies. Set status BLOCKED for an unapproved architectural deviation.
   is already up to date; preserve recovery refs and inspect the child patch.
 - [x] (2026-11-25) Revalidate the current target: 24 tests and all doctest
   suites passed; typecheck, rustdoc, Clippy, and Whitaker passed.
-- [ ] Obtain explicit plan approval.
-- [ ] EP-M1: ratify the ADR and synchronize policy documents.
+- [x] (2026-11-25) Obtain explicit plan approval; implementation authorized.
+- [x] (2026-11-25) EP-M1: accept ADR 0003 and synchronize the policy
+  documents. Gates `make check-fmt`, `make typecheck`, `make lint`, `make test`,
+  `make markdownlint` (with spelling), `make nixie`,
+  `make test-workflow-contracts`, and `git diff --check` all exited zero.
 - [ ] EP-M2: reconcile evidence and mark roadmap 1.1.2 done.
 
 ## Surprises & discoveries
@@ -112,6 +115,16 @@ has since adopted `docs/adrs/adr-nnnn-title-slug.md` and
 `docs/rfcs/rfc-nnnn-title-slug.md`; the spelling-policy target has not. The
 style guide itself remains `docs/documentation-style-guide.md` on both.
 
+At EP-M1 the target's style guide still documents the older
+`docs/adr-NNN-short-description.md` convention, so the branch now contains both
+`docs/adr-001...`, `docs/adr-002...` and the new `docs/adrs/adr-0003...`
+record. Inbound links to ADR 002 use
+`../adr-002-cargo-workspace-and-crate-boundaries.md`, which resolves at this
+target; the documentation migration will re-point them. `mdtablefix` reflowed
+the wide option and verification tables, which is expected formatting rather
+than a content change. The eight-gate run spent most of its wall-clock queued
+for compile admission but reported no faults.
+
 ## Decision log
 
 - 2026-10-20: recommend explicit non-strict support in v1 while retaining the
@@ -137,15 +150,54 @@ style guide itself remains `docs/documentation-style-guide.md` on both.
   existing ADR references through the contents index when the prerequisite
   branch incorporates the documentation migration. Do not migrate existing
   records as part of this policy task.
+- 2026-11-25: plan approved and implementation authorized. The agreed v1
+  decision is an explicit `strict = false` opt-out with strict XPASS by
+  default. EP-M1 and EP-M2 may now proceed as written; no tolerance deviation
+  is requested.
+- 2026-11-25: EP-M1 accepts ADR 0003 at
+  `docs/adrs/adr-0003-strict-xpass-default-and-non-strict-policy.md` and
+  synchronizes the design, terms of reference, user guide, developer guide, and
+  contents index. The terms-of-reference §9 strictness question is resolved in
+  place; the other open questions are preserved. The change remains
+  documentation-only, so no compatibility layer, migration, or public-interface
+  change applies.
 
 ## Outcomes & retrospective
 
 The plan specifies a bounded documentation decision and its acceptance
-evidence. No ADR has been accepted and no feature implemented. Expert review
-found no blocking design defect; its precision and delivery findings were
-incorporated. Record actual gate results and publication evidence as they
-become available. Do not mark this plan COMPLETE until its approved
-implementation milestones and upstream reconciliation are complete.
+evidence. Approval was granted on 2026-11-25. No ADR had been accepted and no
+feature implemented at approval time. Expert review found no blocking design
+defect; its precision and delivery findings were incorporated. Record actual
+gate results and publication evidence as they become available. Do not mark
+this plan COMPLETE until its approved implementation milestones and upstream
+reconciliation are complete.
+
+EP-M1 delivered on 2026-11-25. Evidence:
+
+- E1: `docs/adrs/adr-0003-strict-xpass-default-and-non-strict-policy.md`
+  records Status "Accepted, 2026-11-25", adopts Option B, and states that
+  `strict = false` ships in version 1 while strict XPASS stays the default. Its
+  options table rejects the non-strict default, and "Consequence for CI users"
+  names the stale-marker and green-suite risk.
+- E2: Table 2 in the ADR, design §§6-7 and 11-14, the users' guide section
+  "Expected-failure policy (planned version 1)", and the developer guide
+  section "Expected-failure classification and harness mapping" agree on all
+  eight table cells. The witnesses (successful return, permitted panic,
+  wrong-mode `Err`, missing substring) and the unrelated-failure case are
+  recorded in the ADR's "Policy invariants".
+- E3: the diff is documentation only: no Rust, manifest, lockfile, build
+  configuration, or dependency file changed. The ADR and developer guide
+  document the core-classification and adapter-mapping boundary.
+- E4: pending EP-M2 (roadmap checkbox and final gates).
+
+Gate evidence for EP-M1: `make check-fmt`, `make typecheck`, `make lint`,
+`make test`, `make markdownlint` (which runs spelling), `make nixie`,
+`make test-workflow-contracts`, and `git diff --check` all exited zero. Logs
+and immediate statuses are retained as
+`/tmp/<gate>-rstest-xfail-1-1-2-epm1.out` and `.status`. `make test` ran 24
+tests and the doctest suites; Markdown lint reported 0 issues in 23 files;
+spelling did not regenerate `typos.toml`; `nixie` validated every diagram; and
+the workflow contracts passed 91 pytest cases plus the CV-005 check.
 
 ## Context and orientation
 
@@ -201,6 +253,12 @@ claim that `main` was integrated or change the PR's target.
 No proof standard or Verus target exists at this baseline. Do not invent one
 for a prose decision. Recheck conformance and record any proposed deviation at
 each milestone before continuing.
+
+At EP-M1 (2026-11-25): C1 is satisfied by the Accepted status and decision in
+ADR 0003; C2 by the outcome table agreed across the ADR, design, user guide,
+and developer guide; C3 by the unchanged source tree and the documented
+core/adapter boundary. C4 remains open until EP-M2 checks the roadmap entry and
+re-runs the gates.
 
 ## Verification plan
 
@@ -482,3 +540,10 @@ exit statuses are retained as `/tmp/xpass-rebase-20261125-<target>.out` and
 `.status`. Final formatting, Markdown/spelling, and diagram checks gate the
 plan-refresh commit. No runtime changes or implementation approval followed
 from this validation.
+
+2026-11-25: approval granted and EP-M1 delivered. ADR 0003 is accepted at
+`docs/adrs/adr-0003-strict-xpass-default-and-non-strict-policy.md`; the design,
+terms of reference, user guide, developer guide, and contents index are
+synchronized; and all eight EP-M1 gates passed. Decision scope, the strict
+default, and the explicit non-strict opt-out are unchanged from the approved
+plan.
