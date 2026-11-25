@@ -1,11 +1,12 @@
 # Record strict XPASS default behaviour (1.1.2)
 
-Status: APPROVED — implementation authorized 2026-11-25.
+Status: COMPLETE
 
 This ExecPlan is a living document. Keep its constraints, tolerances, risks,
 progress, discoveries, decisions, conformance basis, verification, and outcomes
-current. Explicit approval was granted on 2026-11-25. This plan now proceeds to
-ratify the ADR and complete roadmap item 1.1.2 under milestones EP-M1 and EP-M2.
+current. Explicit approval was granted on 2026-11-25. Both milestones are
+delivered: ADR 0003 is accepted, the policy documents are synchronized, and
+roadmap task 1.1.2 is checked.
 
 ## Purpose / big picture
 
@@ -89,7 +90,9 @@ applies. Set status BLOCKED for an unapproved architectural deviation.
   documents. Gates `make check-fmt`, `make typecheck`, `make lint`, `make test`,
   `make markdownlint` (with spelling), `make nixie`,
   `make test-workflow-contracts`, and `git diff --check` all exited zero.
-- [ ] EP-M2: reconcile evidence and mark roadmap 1.1.2 done.
+- [x] (2026-11-25) EP-M2: reconcile evidence, mark roadmap 1.1.2 done, and
+  re-run the full gate sequence. All eight gates exited zero; logs and statuses
+  are retained as `/tmp/<gate>-rstest-xfail-1-1-2-epm2.out` and `.status`.
 
 ## Surprises & discoveries
 
@@ -124,6 +127,13 @@ target; the documentation migration will re-point them. `mdtablefix` reflowed
 the wide option and verification tables, which is expected formatting rather
 than a content change. The eight-gate run spent most of its wall-clock queued
 for compile admission but reported no faults.
+
+`mapsplice` 0.1.0 could not make the EP-M2 roadmap edit. `replace` and `delete`
+failed with `dangling_dependency` even on a minimal three-task roadmap, and
+`insert` reflowed nested bullets and rewrote a `Requires 1.1.1 and 1.1.2`
+reference to the shifted number. The roadmap tick was therefore made as a
+one-character direct edit, verified by `git diff` to change only the 1.1.2
+checkbox. This is a tool defect to report, not a roadmap-content change.
 
 ## Decision log
 
@@ -161,16 +171,20 @@ for compile admission but reported no faults.
   place; the other open questions are preserved. The change remains
   documentation-only, so no compatibility layer, migration, or public-interface
   change applies.
+- 2026-11-25: EP-M2 records the `mapsplice` 0.1.0 failure and applies the
+  equivalent minimal checkbox edit directly. Only roadmap 1.1.2 is checked;
+  1.1.3, later tasks, and every `Requires` reference are unchanged. No
+  tolerance trigger applies: scope, policy, and public interfaces are
+  unaffected.
 
 ## Outcomes & retrospective
 
-The plan specifies a bounded documentation decision and its acceptance
+The plan delivered a bounded documentation decision and its acceptance
 evidence. Approval was granted on 2026-11-25. No ADR had been accepted and no
 feature implemented at approval time. Expert review found no blocking design
-defect; its precision and delivery findings were incorporated. Record actual
-gate results and publication evidence as they become available. Do not mark
-this plan COMPLETE until its approved implementation milestones and upstream
-reconciliation are complete.
+defect; its precision and delivery findings were incorporated. The delivered
+outcome is a settled policy, not working macros; classifier and adapter
+execution remain later roadmap work.
 
 EP-M1 delivered on 2026-11-25. Evidence:
 
@@ -188,7 +202,9 @@ EP-M1 delivered on 2026-11-25. Evidence:
 - E3: the diff is documentation only: no Rust, manifest, lockfile, build
   configuration, or dependency file changed. The ADR and developer guide
   document the core-classification and adapter-mapping boundary.
-- E4: pending EP-M2 (roadmap checkbox and final gates).
+- E4: roadmap 1.1.2 is checked, 1.1.3 and later tasks are untouched, every
+  `Requires` reference still resolves, and the full eight-gate sequence passed
+  again. Relative links in the ADR and the synchronized documents resolve.
 
 Gate evidence for EP-M1: `make check-fmt`, `make typecheck`, `make lint`,
 `make test`, `make markdownlint` (which runs spelling), `make nixie`,
@@ -219,8 +235,21 @@ marker-only rule to the macro surface. It also raised the unspecified
 `#[should_panic]` combination; design §7 now rejects that combination at
 compile time and §12 carries the matching `trybuild` row. This is a
 clarification of the existing unsupported-construct rule, required by failure
-preservation (P3), not a change to the v1 strictness decision. No policy
-content changed.
+preservation (P3), not a change to the v1 strictness decision. A fourth pass
+reported zero findings over the exact repaired content, and no policy content
+changed.
+
+EP-M2 re-ran the full eight-gate sequence on the final documentation set after
+the roadmap tick: `make check-fmt`, `make typecheck`, `make lint`, `make test`,
+`make markdownlint` (with spelling), `make nixie`,
+`make test-workflow-contracts`, and `git diff --check` all exited zero.
+`make test` again ran 24 tests and the doctest suites; the workflow contracts
+passed 91 pytest cases plus the CV-005 check; spelling did not regenerate
+`typos.toml`; and no gate changed a tracked file. The EP-M2 review raised one
+minor developer-guide finding, accepted: the classification section now labels
+its contract as planned, because the crate roots remain placeholders.
+Publication and hosted CI/review state are recorded by PR delivery, not by this
+local plan.
 
 ## Context and orientation
 
@@ -280,8 +309,11 @@ each milestone before continuing.
 At EP-M1 (2026-11-25): C1 is satisfied by the Accepted status and decision in
 ADR 0003; C2 by the outcome table agreed across the ADR, design, user guide,
 and developer guide; C3 by the unchanged source tree and the documented
-core/adapter boundary. C4 remains open until EP-M2 checks the roadmap entry and
-re-runs the gates.
+core/adapter boundary.
+
+At EP-M2 (2026-11-25): C4 is satisfied by the checked roadmap entry, the
+completed gate sequence, and resolving links. C1-C3 remain satisfied with no
+change to source or dependencies. All four criteria are discharged.
 
 ## Verification plan
 
@@ -570,3 +602,8 @@ terms of reference, user guide, developer guide, and contents index are
 synchronized; and all eight EP-M1 gates passed. Decision scope, the strict
 default, and the explicit non-strict opt-out are unchanged from the approved
 plan.
+
+2026-11-25: EP-M2 delivered. Roadmap 1.1.2 is checked, the full eight-gate
+sequence passed again on the final documentation set, and this plan is
+COMPLETE. Recorded the `mapsplice` 0.1.0 failure and the equivalent minimal
+checkbox edit, which changed no other roadmap content.

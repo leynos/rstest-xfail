@@ -14,6 +14,10 @@ sequence.
 
 ## Expected-failure classification and harness mapping
 
+This section describes the planned version 1 contract. The three crate roots
+are placeholders, so none of these types or operations exist yet; roadmap 1.2.x
+implements the core and roadmap 2.1.x the macro adapter.
+
 The core crate owns classification; adapters own harness mapping. Raw body
 observations are converted to a `BodyOutcome`, the configured `XfailPolicy`
 normalizes it to XFAIL, XPASS, or an unexpected failure, and the adapter turns
