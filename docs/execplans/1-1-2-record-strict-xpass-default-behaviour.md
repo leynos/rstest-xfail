@@ -255,7 +255,10 @@ The hosted ExecPlan assessment (Assessment-ID `xpass-1.1.2-4367f96-20261125-1`)
 returned "mostly complete" with two in-scope documentation gaps, both accepted.
 Design §4 now separates the classification inputs from the strictness that maps
 a classification to a harness result, and the adapter data-flow list in §5.1
-now includes the non-strict XPASS case. Neither change alters policy.
+now includes the non-strict XPASS case. The candidate-bound follow-up then
+identified that the same definition still listed the reason as a classification
+input; §4 now treats the reason as explanatory metadata, matching the abstract
+model above. None of these changes alters policy.
 
 ## Context and orientation
 
