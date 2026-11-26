@@ -53,7 +53,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@b50fd9a2b2f2a096d64fe44593805dd2da7f9148
+        uses: leynos/shared-actions/.github/actions/setup-rust@bd052c68a4792e92c3272fb1b6ea3b594f3ab7f3
         with:
           install-mold: 'true'
           install-clang-lld: 'true'
@@ -63,7 +63,7 @@ jobs:
           RUSTFLAGS: ""
         run: cargo binstall --no-confirm --locked cargo-nextest
       - name: Test and Measure Coverage
-        uses: leynos/shared-actions/.github/actions/generate-coverage@b50fd9a2b2f2a096d64fe44593805dd2da7f9148
+        uses: leynos/shared-actions/.github/actions/generate-coverage@bd052c68a4792e92c3272fb1b6ea3b594f3ab7f3
         env:
           CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: clang
           RUSTFLAGS: -C link-arg=-fuse-ld=lld
@@ -82,7 +82,7 @@ jobs:
         run: echo "available=${{ secrets.CS_ACCESS_TOKEN != '' }}" >> "$GITHUB_OUTPUT"
       - name: Upload coverage data to CodeScene
         if: ${{ steps.codescene-token.outputs.available == 'true' && github.ref == 'refs/heads/main' }}
-        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@b50fd9a2b2f2a096d64fe44593805dd2da7f9148
+        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@bd052c68a4792e92c3272fb1b6ea3b594f3ab7f3
         with:
           path: lcov.info
           format: lcov
