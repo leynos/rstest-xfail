@@ -106,7 +106,7 @@ coverage: ## Generate lcov coverage with lld for llvm-tools compatibility
 # reader can prove the boundary. LLVM displaces the Cranelift development
 # profile, and the backend key opts in the temporary project where Dylint builds
 # its driver.
-lint: ## Run Clippy and the Whitaker Dylint suite with warnings denied
+lint: yamllint actionlint ## Run Clippy and the Whitaker Dylint suite with warnings denied
 	RUSTDOCFLAGS="$(RUSTDOC_FLAGS)" $(CARGO) doc --no-deps
 	$(CARGO) clippy $(CLIPPY_FLAGS)
 	env -u CARGO_ENCODED_RUSTFLAGS RUSTFLAGS="-D warnings" CARGO_PROFILE_DEV_CODEGEN_BACKEND=llvm CARGO_UNSTABLE_CODEGEN_BACKEND=true $(WHITAKER) --all -- $(CARGO_FLAGS)
@@ -192,3 +192,18 @@ rust-audit: ## Audit the Rust workspace for known vulnerabilities
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) | \
 	awk 'BEGIN {FS=":"; printf "Available targets:\n"} {printf "  %-20s %s\n", $$1, $$2}'
+
+YAMLLINT ?= yamllint
+ACTIONLINT ?= actionlint
+
+.PHONY: yamllint actionlint
+
+# yamllint reads `.yamllint.yml`, which extends `.yamllint-estate.yml`, and
+# resolves that path against the current directory, so run it from the root.
+yamllint: SHELL := bash
+yamllint: .SHELLFLAGS := -eo pipefail -c
+yamllint: ## Lint every tracked YAML file strictly
+	git ls-files -z '*.yml' '*.yaml' | xargs -0 -r $(YAMLLINT) --strict --
+
+actionlint: ## Lint the GitHub Actions workflows, including their shell scripts
+	$(ACTIONLINT)
