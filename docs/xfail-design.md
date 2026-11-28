@@ -12,7 +12,7 @@ Companion documents:
 - [Repository layout](repository-layout.md).
 - [Documentation style guide](documentation-style-guide.md).
 
-Last substantive revision: 2026-06-07.
+Last substantive revision: 2026-11-25.
 
 ## 1. Problem statement
 
@@ -61,15 +61,15 @@ Non-goals:
 
 ## 4. Terminology
 
-| Term               | Definition                                                                                                                       |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
-| Expected failure   | A test body outcome that fails in a way permitted by its xfail configuration.                                                    |
-| XFAIL              | The reported expected-failure state. Under libtest this is still an `ok` test unless an adapter records richer output elsewhere. |
-| XPASS              | A test marked xfail that observed a passing body outcome. In strict mode this panics and fails the test.                         |
-| Unexpected failure | A failing body outcome that does not satisfy the xfail policy, such as the wrong failure mode or a failed message match.         |
-| Body outcome       | The raw result of executing the original user body before xfail policy is applied.                                               |
-| Xfail policy       | Reason, strictness, mode, and optional message matching rules used to classify the body outcome.                                 |
-| Adapter            | Code that maps the shared core classifier into a surface: proc macro, async helper, or `rstest-bdd` step integration.            |
+| Term               | Definition                                                                                                                                                                                |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Expected failure   | A test body outcome that fails in a way permitted by its xfail configuration.                                                                                                             |
+| XFAIL              | The reported expected-failure state. Under libtest this is still an `ok` test unless an adapter records richer output elsewhere.                                                          |
+| XPASS              | A test marked xfail that observed a passing body outcome. In strict mode this panics and fails the test.                                                                                  |
+| Unexpected failure | A failing body outcome that does not satisfy the xfail policy, such as the wrong failure mode or a failed message match.                                                                  |
+| Body outcome       | The raw result of executing the original user body before xfail policy is applied.                                                                                                        |
+| Xfail policy       | Failure mode and optional message matching rules used to classify the body outcome, plus the explanatory reason text and the strictness that maps the classification to a harness result. |
+| Adapter            | Code that maps the shared core classifier into a surface: proc macro, async helper, or `rstest-bdd` step integration.                                                                     |
 
 ## 5. Architecture
 
@@ -110,6 +110,9 @@ consume.
    - `Xfail` prints or records expected-failure detail and lets the rewritten
      test return `()`.
    - strict `Xpass` panics so the harness fails the test.
+   - non-strict `Xpass` prints or records the XPASS detail and lets the
+     rewritten test return `()`; the harness may hide output from successful
+     tests, so the diagnostic is best effort.
    - `UnexpectedFailure` panics with the original failure detail so the harness
      still fails the test.
 
@@ -166,6 +169,14 @@ pub enum XfailOutcome {
     UnexpectedFailure { reason: &'static str, detail: Option<String> },
 }
 ```
+
+The user-facing default is strict: omitting `strict` behaves like
+`strict = true`, and the macro's only route to `Strictness::NonStrict` is an
+explicit `strict = false` on one marker. No global, workspace, or environment
+setting changes the default. Adapters that construct a policy through the core
+API make a deliberate programmatic choice for their own surface; the core adds
+no configuration switch. See
+[ADR 0003](adrs/adr-0003-strict-xpass-default-and-non-strict-policy.md).
 
 The first implementation may keep fields private and expose constructors if
 that produces a cleaner public API. The important contract is that adapters can
@@ -234,6 +245,7 @@ The user-facing macro accepts explicit named arguments:
 ```rust
 #[xfail(reason = "BUG-123: parser accepts empty input")]
 #[xfail(reason = "BUG-123", strict = true)]
+#[xfail(reason = "BUG-123", strict = false)]
 #[xfail(reason = "BUG-123", mode = "panic")]
 #[xfail(reason = "BUG-123", mode = "result")]
 #[xfail(reason = "BUG-123", contains = "invalid input")]
@@ -242,13 +254,21 @@ The user-facing macro accepts explicit named arguments:
 Rules:
 
 - `reason` is required and must be a string literal.
-- `strict` defaults to `true`.
+- `strict` defaults to `true`, so an XPASS fails the test and the suite.
+- `strict = false` is a version 1, per-marker opt-out. It still executes the
+  body, keeps the XPASS classification, and relaxes only the marker's harness
+  failure; it never accepts a mode or message mismatch
+  ([ADR 0003](adrs/adr-0003-strict-xpass-default-and-non-strict-policy.md)).
 - `mode` defaults to `"any"`.
 - `contains` matches the panic or error message after outcome observation.
 - Unknown arguments are compile errors.
 - `#[xfail]` on a non-function item is a compile error.
 - `#[xfail]` on functions with unsupported signatures is a compile error with
   a diagnostic that names the unsupported construct.
+- `#[should_panic]` on the same function as `#[xfail]` is a compile error. The
+  two attributes assign opposite meanings to a panic, and preserving
+  `#[should_panic]` would let an unexpected failure or a strict XPASS satisfy
+  the harness, breaking failure preservation.
 
 The macro should preserve:
 
@@ -379,34 +399,45 @@ failed in an expected way.
 ## 11. Reporting
 
 The stock harness cannot report an expected-failure bucket. The facade adapter
-therefore has two obligations:
+therefore has these obligations:
 
 - On XFAIL, emit a concise diagnostic that includes `XFAIL` and the reason.
 - On strict XPASS, panic with a concise diagnostic that includes `XPASS` and
   the reason.
+- On non-strict XPASS, emit a diagnostic that includes `XPASS` and the reason,
+  then let the rewritten test pass. The stock harness may capture output from
+  successful tests, so this report is best effort and must not be promised to
+  appear in every CI log.
 - On `UnexpectedFailure`, panic with a concise diagnostic that includes the
   xfail reason, the observed failure detail, and the policy mismatch. Examples
   include `mode = "panic"` receiving `Result::Err`, `mode = "result"` receiving
   a panic, or `contains = "..."` not matching the rendered failure message.
+  This happens under both strictness settings.
 
 The core crate should return structured `XfailOutcome` values and leave output
-policy to adapters. That keeps BDD reporting independent from libtest output
-and avoids baking `eprintln!` into the reusable core.
+policy to adapters. The classification in `XfailOutcome` does not depend on
+strictness, so a non-strict adapter can still report XPASS. That keeps BDD
+reporting independent from libtest output and avoids baking `eprintln!` into
+the reusable core.
 
 ## 12. Verification strategy
 
 The correctness property is small enough to state precisely:
 
-| Property                                                                            | Verification method                                               |
-| ----------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| A passing body classified under strict xfail becomes XPASS and fails through panic. | Unit tests over core classification plus runtime macro tests.     |
-| A panicking body classified under default mode becomes XFAIL.                       | Unit tests using `catch_unwind` and runtime macro tests.          |
-| A `Result::Err` body classified under default mode becomes XFAIL.                   | Unit tests over `IntoBodyOutcome` and runtime macro tests.        |
-| `mode = "panic"` rejects `Result::Err` as unexpected failure and fails the harness. | Unit tests over policy classification plus runtime macro tests.   |
-| `mode = "result"` rejects panic as unexpected failure and fails the harness.        | Unit tests over policy classification plus runtime macro tests.   |
-| `contains = "..."` mismatch becomes unexpected failure and fails the harness.       | Unit tests for panic and error messages plus runtime macro tests. |
-| `rstest` per-case xfail affects only the intended generated case.                   | `trybuild` compile tests plus black-box generated-test fixtures.  |
-| Async xfail works with each supported runtime macro and documented attribute order. | Feature-gated `trybuild` cases and runtime tests.                 |
+| Property                                                                                         | Verification method                                               |
+| ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| A passing body classified under strict xfail becomes XPASS and fails through panic.              | Unit tests over core classification plus runtime macro tests.     |
+| Omitted strictness and explicit `strict = true` produce identical outcomes.                      | Unit tests over policy construction plus runtime macro tests.     |
+| A passing body with `strict = false` is XPASS and passes the harness while remaining reportable. | Unit tests over classification plus runtime macro exit status.    |
+| A mode or message mismatch still fails the harness under `strict = false`.                       | Unit tests over classification plus runtime macro exit status.    |
+| A panicking body classified under default mode becomes XFAIL.                                    | Unit tests using `catch_unwind` and runtime macro tests.          |
+| A `Result::Err` body classified under default mode becomes XFAIL.                                | Unit tests over `IntoBodyOutcome` and runtime macro tests.        |
+| `mode = "panic"` rejects `Result::Err` as unexpected failure and fails the harness.              | Unit tests over policy classification plus runtime macro tests.   |
+| `mode = "result"` rejects panic as unexpected failure and fails the harness.                     | Unit tests over policy classification plus runtime macro tests.   |
+| `contains = "..."` mismatch becomes unexpected failure and fails the harness.                    | Unit tests for panic and error messages plus runtime macro tests. |
+| `#[should_panic]` combined with `#[xfail]` is rejected at compile time.                          | `trybuild` compile-fail cases.                                    |
+| `rstest` per-case xfail affects only the intended generated case.                                | `trybuild` compile tests plus black-box generated-test fixtures.  |
+| Async xfail works with each supported runtime macro and documented attribute order.              | Feature-gated `trybuild` cases and runtime tests.                 |
 
 The combinatorial surface is the interaction between return style, failure
 style, strictness, mode, message matching, `rstest` case placement, and async
@@ -415,18 +446,21 @@ than only one example per feature.
 
 ## 13. Risks and trade-offs
 
-| Risk                                                                       | Consequence                                                                    | Mitigation                                                                                      |
-| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| Proc-macro stacking differs across `rstest`, runtime macros, and `xfail`.  | Valid-looking examples fail to compile or classify at the wrong layer.         | Treat supported attribute order as a tested contract and reject or document unsupported orders. |
-| Panic hooks print noise before caught panics.                              | XFAIL output may contain panic-hook text.                                      | Do not mutate global hooks by default; document the behaviour.                                  |
-| Non-strict XPASS hides fixed bugs.                                         | Stale xfails accumulate.                                                       | Default to strict and require explicit opt-out if non-strict ships.                             |
-| Unexpected failures are treated as expected failures after body rewriting. | A mismatched mode or `contains` policy can make a genuinely failing test pass. | Require adapters to panic on `UnexpectedFailure` and cover that path in runtime macro tests.    |
-| Message matching on `Debug` output is brittle.                             | Error formatting changes can flip classification.                              | Document `contains` as a convenience, not a semantic error contract.                            |
-| `rstest-xfail` implements BDD macro syntax directly.                       | `rstest-xfail` and `rstest-bdd` diverge, and BDD ownership becomes unclear.    | Keep classification in core and implement BDD attributes in `rstest-bdd`.                       |
+| Risk                                                                       | Consequence                                                                    | Mitigation                                                                                                                |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| Proc-macro stacking differs across `rstest`, runtime macros, and `xfail`.  | Valid-looking examples fail to compile or classify at the wrong layer.         | Treat supported attribute order as a tested contract and reject or document unsupported orders.                           |
+| Panic hooks print noise before caught panics.                              | XFAIL output may contain panic-hook text.                                      | Do not mutate global hooks by default; document the behaviour.                                                            |
+| Non-strict XPASS hides fixed bugs.                                         | Stale xfails accumulate in opted-out tests.                                    | Keep strict as the default, make non-strict an explicit per-marker opt-out, and report XPASS from the adapter (ADR 0003). |
+| Unexpected failures are treated as expected failures after body rewriting. | A mismatched mode or `contains` policy can make a genuinely failing test pass. | Require adapters to panic on `UnexpectedFailure` and cover that path in runtime macro tests.                              |
+| Message matching on `Debug` output is brittle.                             | Error formatting changes can flip classification.                              | Document `contains` as a convenience, not a semantic error contract.                                                      |
+| `rstest-xfail` implements BDD macro syntax directly.                       | `rstest-xfail` and `rstest-bdd` diverge, and BDD ownership becomes unclear.    | Keep classification in core and implement BDD attributes in `rstest-bdd`.                                                 |
 
 ## 14. Deferred decisions
 
-- Whether non-strict XPASS ships in v1 or remains deferred.
+The version 1 strictness question is settled by
+[ADR 0003](adrs/adr-0003-strict-xpass-default-and-non-strict-policy.md) and is
+no longer deferred. The remaining decisions are:
+
 - Whether async support is enabled by default or feature-gated.
 - The exact BDD macro syntax.
 - Whether the facade crate re-exports all core types or only stable policy

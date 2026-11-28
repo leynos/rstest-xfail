@@ -28,7 +28,7 @@ all macro and BDD work because both depend on the core outcome vocabulary.
   - See xfail-design.md §§5-6.
   - Success: `cargo metadata` shows all three workspace crates and the facade
     re-exports only the intended public surface.
-- [ ] 1.1.2. Record an ADR for strict XPASS default behaviour and the initial
+- [x] 1.1.2. Record an ADR for strict XPASS default behaviour and the initial
   non-strict policy.
   - See terms-of-reference.md §§6-9 and xfail-design.md §§7, 14.
   - Success: the ADR states whether `strict = false` ships in v1 and names the

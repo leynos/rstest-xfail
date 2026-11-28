@@ -12,6 +12,52 @@ delivery scope. These documents define the problem boundaries, expected-failure
 classification model, `rstest-bdd` ownership handoff, and implementation
 sequence.
 
+## Expected-failure classification and harness mapping
+
+This section describes the planned version 1 contract. The three crate roots
+are placeholders, so none of these types or operations exist yet; roadmap 1.2.x
+implements the core and roadmap 2.1.x the macro adapter.
+
+The core crate owns classification; adapters own harness mapping. Raw body
+observations are converted to a `BodyOutcome`, the configured `XfailPolicy`
+normalizes it to XFAIL, XPASS, or an unexpected failure, and the adapter turns
+that classification into a harness result. Classification never reads the
+strictness setting, so every adapter can rely on the same `XfailOutcome` and
+report its state independently of exit status.
+
+The mapping for the version 1 policy is:
+
+- XFAIL: emit a diagnostic that includes `XFAIL` and the reason, and return
+  normally.
+- Strict XPASS: panic with `XPASS` and the reason.
+- Non-strict XPASS: emit the same XPASS diagnostic and return normally. The
+  harness may hide output from successful tests, so this is best effort.
+- Unexpected failure: panic with the reason, the observed detail, and the
+  policy mismatch under both strictness settings.
+
+Strictness stays local to one marker in the macro surface. `strict` defaults to
+`true`, and the macro's only route to non-strict is `strict = false` on that
+marker; there is no global, workspace, or environment override. An adapter that
+builds a policy through the core API chooses strictness programmatically for
+its own surface, which is a deliberate code-level choice rather than a
+configuration switch. The internal contract to preserve is:
+
+- An omitted `strict` and `strict = true` are indistinguishable.
+- Switching to non-strict changes only the XPASS harness result; XFAIL and
+  unexpected failure keep theirs.
+- No failure-mode or message mismatch ever becomes a success.
+
+`rstest-bdd` and any other downstream adapter depend on `rstest-xfail-core`,
+not on the procedural macro. They reuse the classification and may report an
+XPASS even when a non-strict adapter lets the surrounding scenario succeed.
+Tests for the mapping belong at three levels: core policy construction and
+classification tests with `rstest` tables, macro tests for the omitted and
+explicit `strict` forms, and end-to-end child test processes that observe exit
+status for strict XPASS, non-strict XPASS, and both mismatch cases.
+
+See [ADR 0003](adrs/adr-0003-strict-xpass-default-and-non-strict-policy.md) and
+sections 6 and 11-12 of the [technical design](xfail-design.md).
+
 ## Local Workflow
 
 ### Workspace layout

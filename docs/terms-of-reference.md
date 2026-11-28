@@ -9,7 +9,7 @@ Companion documents:
 [technical design](xfail-design.md), [roadmap](roadmap.md), [documentation contents](contents.md),
 and [documentation style guide](documentation-style-guide.md).
 
-Last substantive revision: 2026-06-07.
+Last substantive revision: 2026-11-25.
 
 ## 1. Background and motivation
 
@@ -129,6 +129,8 @@ reporting and macro-level test behaviour do not diverge.
   classification logic.
 - Make strict XPASS the default so a fixed bug fails the suite and prompts
   removal of the expected-failure marker.
+- Offer an explicit, per-marker `strict = false` opt-out in version 1 without
+  weakening the strict default.
 - Preserve compatibility with Rust's default harness instead of requiring a
   bespoke runner.
 
@@ -211,13 +213,13 @@ Strategic success:
 
 ## 9. Open questions
 
-| Question                                                                                   | Why it matters                                                                                     | Resolution path                                                                         |
-| ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| Should v1 expose `strict = false`, or reserve non-strict XPASS for a later release?        | Non-strict XPASS mirrors pytest but weakens CI feedback.                                           | Decide in an Architecture Decision Record (ADR) before stabilizing the macro arguments. |
-| Should message matching be called `contains`, `expected`, or `matches`?                    | The name affects user intuition and compatibility with Rust's `#[should_panic(expected = "...")]`. | Prototype macro syntax and review examples in the user's guide.                         |
-| Should async xfail require an `async` feature using `FutureExt::catch_unwind`?             | The dependency changes the core surface and feature matrix.                                        | Spike sync wrapper and future-level catching with `trybuild` cases.                     |
-| Should `rstest-bdd` expose `#[then(..., xfail = "...")]`, `#[then_xfail(...)]`, or both?   | Macro syntax belongs to `rstest-bdd`, not `rstest-xfail`.                                          | Decide in the `rstest-bdd` integration design before implementation.                    |
-| Should xfail messages use `eprintln!`, `tracing`, or return structured records to callers? | Output policy affects libtest noise and downstream reporting.                                      | Let `rstest-xfail-core` return records and keep printing in adapters.                   |
+| Question                                                                                   | Why it matters                                                                                     | Resolution path                                                                                                                                                                                      |
+| ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Should v1 expose `strict = false`, or reserve non-strict XPASS for a later release?        | Non-strict XPASS mirrors pytest but weakens CI feedback.                                           | Resolved 2026-11-25: version 1 exposes `strict = false` as a local, opt-in relaxation, and strict XPASS stays the default ([ADR 0003](adrs/adr-0003-strict-xpass-default-and-non-strict-policy.md)). |
+| Should message matching be called `contains`, `expected`, or `matches`?                    | The name affects user intuition and compatibility with Rust's `#[should_panic(expected = "...")]`. | Prototype macro syntax and review examples in the user's guide.                                                                                                                                      |
+| Should async xfail require an `async` feature using `FutureExt::catch_unwind`?             | The dependency changes the core surface and feature matrix.                                        | Spike sync wrapper and future-level catching with `trybuild` cases.                                                                                                                                  |
+| Should `rstest-bdd` expose `#[then(..., xfail = "...")]`, `#[then_xfail(...)]`, or both?   | Macro syntax belongs to `rstest-bdd`, not `rstest-xfail`.                                          | Decide in the `rstest-bdd` integration design before implementation.                                                                                                                                 |
+| Should xfail messages use `eprintln!`, `tracing`, or return structured records to callers? | Output policy affects libtest noise and downstream reporting.                                      | Let `rstest-xfail-core` return records and keep printing in adapters.                                                                                                                                |
 
 ## Appendix A. References
 

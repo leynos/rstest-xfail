@@ -30,6 +30,9 @@ documentation set.
 - [ADR 002: Cargo workspace and crate boundaries](adrs/adr-0002-cargo-workspace-and-crate-boundaries.md)
   records the decision to adopt a three-crate Cargo workspace under `crates/`
   with a pure core.
+- [ADR 0003: Strict XPASS default and non-strict policy](adrs/adr-0003-strict-xpass-default-and-non-strict-policy.md)
+  records the strict default for unexpected passes and the explicit per-marker
+  `strict = false` opt-out in version 1.
 
 ## Rust reference material
 
@@ -61,3 +64,5 @@ documentation set.
 
 - [Convert the crate into a Cargo workspace (1.1.1)](execplans/1-1-1-convert-crate-into-a-cargo-workspace.md)
   is the execution plan for roadmap task 1.1.1.
+- [Record strict XPASS default behaviour (1.1.2)](execplans/1-1-2-record-strict-xpass-default-behaviour.md)
+  ratifies the strict XPASS policy ADR and synchronizes the policy documents.
