@@ -203,7 +203,6 @@ import re
 
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
-
 def test_uses_pinned_full_sha(caller_step):
     ref = caller_step["uses"].split("@")[-1]
     assert SHA_RE.match(ref), f"expected a 40-hex commit SHA, got {ref!r}"
@@ -254,7 +253,12 @@ one commit behind until the next push (shared-actions #518).
 (`packages/cv005-contracts`), from a full commit named by `CV005_CONTRACTS_REF`
 in the Makefile, then the pytest contracts in `tests/workflow_contracts/`. A
 fix to the rules is therefore a pin bump. The target needs `uv`, which fetches
-the Python 3.13 the library runs under. The repository's one parameter is its
+the Python 3.13 the library runs under, and `python3` 3.9 or newer to run the
+vendored `scripts/uv_gate.py` helper. The helper (`UV_GATE`, overridable) finds
+`uv` on `PATH`, selects the global uv cache and runs offline first with at most
+one online attempt; a `uv` that reports only `Git operation failed` for a
+source missing from the cache is not retried, so warm the cache once with
+`uv tool run`. There is no `UV` override. The repository's one parameter is its
 `repository` name in `.github/cv005.toml`. The library proves each clause
 against breaching fixtures as well as against the real workflows: the
 pull-request clauses run over every workflow a pull request can reach through
